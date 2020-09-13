@@ -133,10 +133,17 @@ A process that receives a `SIGTERM` or `SIGINT` signal must immediately stop its
   - `config`  specifies the path to a file that contains specific information required from the deliverable (e.g. processes that broadcast).
 
 ## Compilation
-All submitted implementations will be tested using Ubuntu 18.04 running
-on a 64-bit architecture. All submitted files are to be placed in one zip file, in the same structure as the provided templates. Make sure that the top-level of the zip file is not a directory that contains the template (along with your source code inside `src`), but the template itself.
+All submitted implementations will be tested using Ubuntu 18.04 running on a 64-bit architecture. 
+These are the specific versions of toolchains where you project will be tested upon:
+  - gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0
+  - g++ (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0
+  - cmake version 3.10.2
+  - OpenJDK Runtime Environment (build 11.0.8+10-post-Ubuntu-0ubuntu118.04.1)
+  - Apache Maven 3.6.3 (cecedd343002696d0abb50b32b541b8a6ba2883f)
 
-You are **strongly encouraged** to test the compilation of your code in the virtualbox VM provided to you.
+All submitted files are to be placed in one zip file, in the same structure as the provided templates. Make sure that the top-level of the zip file is not a directory that contains the template (along with your source code inside `src`), but the template itself.
+
+You are **strongly encouraged** to test the compilation of your code in the virtualbox VM provided to you. Submissions that fail to compile will not be considered for grading.
 
 **Detailed instructions for submitting your project will be released soon.**
 
