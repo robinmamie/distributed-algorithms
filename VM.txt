@@ -1,0 +1,18 @@
+We provide two variants of the Virtual Machine (VM) Image:
+
+The first variant comes with all the necessary build tools and also includes GuestAdditions. GuestAdditions allows for easy transfer (drag and drop) of files between the VM and the HOST, as well as copying from clipboard between the VM and HOST. You can enable these features from Menu->Devices->Shared Clipboard and Menu->Devices->Drag and Drop.
+https://drive.google.com/file/d/16_aiPlFayAfhGlY-fgH-pcDKhb2s48ks
+
+The second variant comes with all the necessary build tools, but does not include GuestAdditions. Use this variant only if you are experiecing compatibility problems with the first variant:
+https://drive.google.com/file/d/1ccK0O0JSyHnmB4tta_rz1KoDA2FiQAFD
+
+Notes:
+1. You need to access Google Drive using your EPFL to be able to download the file.
+2. The provided images where created with VirtualBox 6.1. Please make sure you use a recent version of VirtualBox.
+
+To use the VM Image, you need to install VirtualBox (https://www.virtualbox.org) in your computer.
+The installation process is straight-forward. In case you encounter any problem, refer to this website (https://wikis.utexas.edu/display/MSBTech/Installing+OVA+files+using+VirtualBox).
+
+VM Image Credentials:
+ - Username: dcl
+ - Password: dcl
