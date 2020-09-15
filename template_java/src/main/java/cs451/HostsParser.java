@@ -70,7 +70,7 @@ public class HostsParser {
     }
 
     public boolean inRange(int id) {
-        return id < hosts.size();
+        return id <= hosts.size();
     }
 
     public List<Host> getHosts() {
