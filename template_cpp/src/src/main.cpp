@@ -4,7 +4,9 @@
 
 #include "barrier.hpp"
 #include "parser.hpp"
+#include "hello.h"
 #include <signal.h>
+
 
 static void stop(int) {
   // reset signal handlers to default
@@ -31,6 +33,9 @@ int main(int argc, char **argv) {
 
   Parser parser(argc, argv, requireConfig);
   parser.parse();
+
+  hello();
+  std::cout << std::endl;
 
   std::cout << "My PID: " << getpid() << "\n";
   std::cout << "Use `kill -SIGINT " << getpid() << "` or `kill -SIGTERM "
@@ -80,6 +85,10 @@ int main(int argc, char **argv) {
   waitOnBarrier(barrier);
 
   std::cout << "Broadcasting messages...\n\n";
+
+  while (true) {
+    std::this_thread::sleep_for(std::chrono::seconds(60));
+  }
 
   return 0;
 }
