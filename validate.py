@@ -411,6 +411,7 @@ def main(processes, messages, runscript, broadcastType, logsDir, testConfig):
         [p.start() for p in monitors]
         [p.join() for p in monitors]
 
+        input('Hit `Enter` to validate the output')
         print("Result of validation: {}".format(validation.checkAll()))
 
     finally:
