@@ -7,11 +7,11 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-public class BarrierParser {
+public class SignalParser {
 
-    private static final String BARRIER_KEY = "--barrier";
+    private static final String SIGNAL_KEY = "--signal";
 
-    private static final int BARRIER_ARGS_NUM = 2;
+    private static final int SIGNAL_ARGS_NUM = 2;
     private static final String COLON_REGEX = ":";
     private static final String IP_START_REGEX = "/";
 
@@ -19,26 +19,26 @@ public class BarrierParser {
     private static int port;
 
     public boolean populate(String key, String value) {
-        if (!key.equals(BARRIER_KEY)) {
+        if (!key.equals(SIGNAL_KEY)) {
             return false;
         }
 
-        String[] barrier = value.split(COLON_REGEX);
-        if (barrier.length != BARRIER_ARGS_NUM) {
+        String[] signal = value.split(COLON_REGEX);
+        if (signal.length != SIGNAL_ARGS_NUM) {
             return false;
         }
 
         try {
-            String ipTest = InetAddress.getByName(barrier[0]).toString();
+            String ipTest = InetAddress.getByName(signal[0]).toString();
             if (ipTest.startsWith(IP_START_REGEX)) {
                 ip = ipTest.substring(1);
             } else {
                 ip = InetAddress.getByName(ipTest.split(IP_START_REGEX)[0]).getHostAddress();
             }
 
-            port = Integer.parseInt(barrier[1]);
+            port = Integer.parseInt(signal[1]);
             if (port <= 0) {
-                System.err.println("Barrier port must be a positive number!");
+                System.err.println("Signal port must be a positive number!");
                 return false;
             }
         } catch (UnknownHostException e) {
