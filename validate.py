@@ -28,7 +28,7 @@ PROCESSES_BASE_IP = 11000
 # Do not run multiple validations concurrently!
 
 class TC:
-    def __init__(self, losses, interface="lo", needSudo=True, sudoPassword=""):
+    def __init__(self, losses, interface="lo", needSudo=True, sudoPassword="dcl"):
         self.losses = losses
         self.interface = interface
         self.needSudo = needSudo
