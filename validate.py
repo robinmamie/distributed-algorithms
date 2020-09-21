@@ -38,8 +38,8 @@ class TC:
         cmd2 = 'tc qdisc change dev {} root netem delay {} {} loss {} {} reorder {} {}'.format(self.interface, *self.losses['delay'], *self.losses['loss'], *self.losses['reordering'])
 
         if self.needSudo:
-            os.system('echo %s | sudo -S {}'.format(cmd1))
-            os.system('echo %s | sudo -S {}'.format(cmd2))
+            os.system("echo {} | sudo -S {}".format(self.sudoPassword, cmd1))
+            os.system("echo {} | sudo -S {}".format(self.sudoPassword, cmd2))
         else:
             os.system(cmd1)
             os.system(cmd2)
@@ -62,7 +62,7 @@ class TC:
     def cleanup(self):
         cmd = 'tc qdisc del dev {} root 2>/dev/null'.format(self.interface)
         if self.needSudo:
-            os.system('echo %s | sudo -S {}'.format(cmd))
+            os.system("echo '{}' | sudo -S {}".format(self.sudoPassword, cmd))
         else:
             os.system(cmd)
 
