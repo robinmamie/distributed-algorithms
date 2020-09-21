@@ -118,6 +118,11 @@ public:
     return barrier_;
   }
 
+  Host signal() const {
+    checkParsed();
+    return signal_;
+  }
+
   const char *outputPath() const {
     checkParsed();
     return outputPath_.c_str();
@@ -204,6 +209,10 @@ private:
       return false;
     }
 
+    if (!parseSignal()) {
+      return false;
+    }
+
     if (!parseOutputPath()) {
       return false;
     }
@@ -218,7 +227,7 @@ private:
   void help(const int, char const *const *argv) {
     auto configStr = "CONFIG";
     std::cerr << "Usage: " << argv[0]
-              << " --id ID --hosts HOSTS --barrier NAME:PORT --output OUTPUT";
+              << " --id ID --hosts HOSTS --barrier NAME:PORT --signal NAME:PORT --output OUTPUT";
 
     if (!withConfig) {
       std::cerr << "\n";
@@ -287,13 +296,36 @@ private:
     return false;
   }
 
-  bool parseOutputPath() {
+  bool parseSignal() {
     if (argc < 9) {
       return false;
     }
 
-    if (std::strcmp(argv[7], "--output") == 0) {
-      outputPath_ = std::string(argv[8]);
+    if (std::strcmp(argv[7], "--signal") == 0) {
+      std::string signal_addr = argv[8];
+      std::replace(signal_addr.begin(), signal_addr.end(), ':', ' ');
+      std::stringstream ss(signal_addr);
+
+      std::string signal_name;
+      unsigned short signal_port;
+
+      ss >> signal_name;
+      ss >> signal_port;
+
+      signal_ = Host(0, signal_name, signal_port);
+      return true;
+    }
+
+    return false;
+  }
+
+  bool parseOutputPath() {
+    if (argc < 11) {
+      return false;
+    }
+
+    if (std::strcmp(argv[9], "--output") == 0) {
+      outputPath_ = std::string(argv[10]);
       return true;
     }
 
@@ -305,11 +337,11 @@ private:
       return true;
     }
 
-    if (argc < 10) {
+    if (argc < 12) {
       return false;
     }
 
-    configPath_ = std::string(argv[9]);
+    configPath_ = std::string(argv[11]);
     return true;
   }
 
@@ -352,6 +384,7 @@ private:
   unsigned long id_;
   std::string hostsPath_;
   Host barrier_;
+  Host signal_;
   std::string outputPath_;
   std::string configPath_;
 };

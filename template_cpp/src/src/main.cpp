@@ -69,6 +69,15 @@ int main(int argc, char **argv) {
   std::cout << "Machine-readbale Port: " << barrier.port << "\n";
   std::cout << "\n";
 
+  std::cout << "Signal:\n";
+  std::cout << "========\n";
+  auto signal = parser.signal();
+  std::cout << "Human-readable IP: " << signal.ipReadable() << "\n";
+  std::cout << "Machine-readable IP: " << signal.ip << "\n";
+  std::cout << "Human-readbale Port: " << signal.portReadable() << "\n";
+  std::cout << "Machine-readbale Port: " << signal.port << "\n";
+  std::cout << "\n";
+
   std::cout << "Path to output:\n";
   std::cout << "===============\n";
   std::cout << parser.outputPath() << "\n\n";
@@ -81,10 +90,16 @@ int main(int argc, char **argv) {
 
   std::cout << "Doing some initialization...\n\n";
 
+  Coordinator coordinator(parser.id(), barrier, signal);
+
   std::cout << "Waiting for all processes to finish initialization\n\n";
-  waitOnBarrier(barrier);
+  coordinator.waitOnBarrier();
 
   std::cout << "Broadcasting messages...\n\n";
+
+  std::cout << "Signaling end of broadcasting messages\n\n";
+  coordinator.finishedBroadcasting();
+
 
   while (true) {
     std::this_thread::sleep_for(std::chrono::seconds(60));
