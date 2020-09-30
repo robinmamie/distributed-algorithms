@@ -12,29 +12,77 @@ public class Message implements Serializable {
 
     private static final long serialVersionUID = 2865064940223588810L;
 
+    public static final class IntPair {
+        private final int a;
+        private final int b;
+        public IntPair(int a, int b) {
+            this.a = a;
+            this.b = b;
+        }
+        @Override
+        public boolean equals(Object that) {
+            return that instanceof IntPair
+                && this.a == ((IntPair)that).a
+                && this.b == ((IntPair)that).b;
+        }
+        @Override
+        public int hashCode() {
+            return (a * 7) + (b * 13);
+        }
+    }
+
+    public static final class IntTriple {
+        private final int a;
+        private final int b;
+        private final int c;
+        public IntTriple(int a, int b, int c) {
+            this.a = a;
+            this.b = b;
+            this.c = c;
+        }
+        @Override
+        public boolean equals(Object that) {
+            return that instanceof IntTriple
+                && this.a == ((IntTriple)that).a
+                && this.b == ((IntTriple)that).b
+                && this.c == ((IntTriple)that).c;
+        }
+        @Override
+        public int hashCode() {
+            return (a * 7) + (b * 13) + (c * 2);
+        }
+    }
+
     private final int originId;
     private final int messageId;
-    private final String content;
+    private final int lastHop;
     private final boolean ack;
-
-    public Message(int originId, int messageId, String content) {
-        this.originId = originId;
-        this.messageId = messageId;
-        this.content = content;
-        this.ack = false;
-    }
 
     public Message(int originId, int messageId) {
         this.originId = originId;
         this.messageId = messageId;
-        this.content = "";
-        this.ack = true;
+        this.lastHop = originId;
+        this.ack = false;
+    }
+
+    public Message(int originId, int messageId, boolean ack) {
+        this.originId = originId;
+        this.messageId = messageId;
+        this.lastHop = originId;
+        this.ack = ack;
+    }
+
+    public Message(Message that, int lastHop) {
+        this.originId = that.originId;
+        this.messageId = that.messageId;
+        this.lastHop = lastHop;
+        this.ack = false;
     }
 
     private Message(Message that) {
         this.originId = that.originId;
         this.messageId = that.messageId;
-        this.content = "";
+        this.lastHop = that.originId;
         this.ack = true;
     }
 
@@ -44,6 +92,18 @@ public class Message implements Serializable {
 
     public int getMessageId() {
         return messageId;
+    }
+
+    public int getLastHop() {
+        return lastHop;
+    }
+
+    public IntPair getId() {
+        return new IntPair(getOriginId(), getMessageId());
+    }
+
+    public IntTriple getFullId() {
+        return new IntTriple(getOriginId(), getMessageId(), getLastHop());
     }
 
     public boolean isAck() {
@@ -66,13 +126,12 @@ public class Message implements Serializable {
         int hash = 1;
         hash = prime * hash + originId;
         hash = prime * hash + messageId;
-        hash = prime * hash + ((content == null) ? 0 : content.hashCode());
         return hash;
     }
 
     @Override
     public String toString() {
-        return (ack ? "Ack" : "Message") + " #" + messageId + " from " + originId + ": " + content;
+        return (ack ? "Ack" : "Message") + " #" + messageId + " from " + originId;
     }
 
     public byte[] serialize() {

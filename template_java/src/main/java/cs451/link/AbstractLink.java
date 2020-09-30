@@ -27,8 +27,10 @@ abstract class AbstractLink implements Link {
 
     protected void handleListeners(Message m, InetAddress a, int p) {
         if (m != null) {
-            for (Listener listener: listeners) {
-                listener.apply(m, a, p);
+            synchronized (listeners) {
+                for (Listener listener: listeners) {
+                    listener.apply(m, a, p);
+                }
             }
         }
     }

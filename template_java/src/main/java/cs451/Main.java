@@ -3,6 +3,7 @@ package cs451;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import cs451.broadcast.UniformReliableBroadcast;
 import cs451.link.Link;
 import cs451.parser.Coordinator;
 import cs451.parser.Host;
@@ -65,25 +66,15 @@ public class Main {
         // TODO FIFO-broadcast
         // TODO L-Causal broadcast
 
-        Link link = Link.getLink(parser.hosts().get(parser.myId()-1).getPort());
-        link.addListener((m, a, p) -> System.out.println(m));
+        //Link link = Link.getLink(parser.hosts().get(parser.myId()-1).getPort());
+        //link.addListener((m, a, p) -> System.out.println(m));
 
-        Message message = new Message(parser.myId(), 1, parser.myId() + " says hello!");
-        for (Host host: parser.hosts()) {
-            InetAddress address;
-            try {
-                address = InetAddress.getByName(host.getIp());
-            } catch (UnknownHostException e) {
-                System.err.println(e);
-                continue;
-            }
-            link.send(message, address, host.getPort());
-            link.send(message, address, host.getPort());
-            link.send(message, address, host.getPort());
-            link.send(message, address, host.getPort());
-            link.send(message, address, host.getPort());
-            link.send(message, address, host.getPort());
-        }
+        Message message = new Message(parser.myId(), 1);
+        int myPort = parser.hosts().get(parser.myId()-1).getPort();
+        UniformReliableBroadcast urb = new UniformReliableBroadcast(myPort, (m, a, d) -> {
+            System.out.println(m + " has been uniformly, reliably broadcast.");
+        }, parser.hosts(), parser.myId());
+        urb.broadcast(message);
 
         // ---------------------------------------------------------------------
 
