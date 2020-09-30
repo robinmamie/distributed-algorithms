@@ -1,10 +1,12 @@
 package cs451;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
-import cs451.broadcast.UniformReliableBroadcast;
-import cs451.link.Link;
+import cs451.broadcast.Broadcast;
 import cs451.parser.Coordinator;
 import cs451.parser.Host;
 import cs451.parser.Parser;
@@ -26,6 +28,16 @@ public class Main {
                 handleSignal();
             }
         });
+    }
+
+    private static int readConfig(String path) {
+        try (BufferedReader br = new BufferedReader(new FileReader(path))) {
+            String line = br.readLine();
+            return Integer.parseInt(line);
+        } catch (IOException e) {
+            System.err.println("Problem with the config file!");
+            return 0;
+        }
     }
 
     public static void main(String[] args) throws InterruptedException {
@@ -60,21 +72,22 @@ public class Main {
         System.out.println("Broadcasting messages...");
         
         // ---------------------------------------------------------------------
-        // Read config file, integer contained in it indicates the number of messages to broadcast
-        // TODO perfect links
-        // TODO URB
         // TODO FIFO-broadcast
         // TODO L-Causal broadcast
 
-        //Link link = Link.getLink(parser.hosts().get(parser.myId()-1).getPort());
-        //link.addListener((m, a, p) -> System.out.println(m));
-
-        Message message = new Message(parser.myId(), 1);
+        int nbMessages = readConfig(parser.config());
         int myPort = parser.hosts().get(parser.myId()-1).getPort();
-        UniformReliableBroadcast urb = new UniformReliableBroadcast(myPort, (m, a, d) -> {
+        List<Message> messages = new ArrayList<>();
+        for (int i = 1; i <= nbMessages; ++i) {
+            messages.add(new Message(parser.myId(), i));
+        }
+
+        Broadcast b = Broadcast.getBroadcast(myPort, (m, a, d) -> {
             System.out.println(m + " has been uniformly, reliably broadcast.");
         }, parser.hosts(), parser.myId());
-        urb.broadcast(message);
+        for (Message m: messages) {
+            b.broadcast(m);
+        }
 
         // ---------------------------------------------------------------------
 

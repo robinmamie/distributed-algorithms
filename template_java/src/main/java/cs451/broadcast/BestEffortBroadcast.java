@@ -9,7 +9,7 @@ import cs451.link.Link;
 import cs451.listener.Listener;
 import cs451.parser.Host;
 
-public class BestEffortBroadcast implements Broadcast {
+class BestEffortBroadcast implements Broadcast {
 
     private final Link link;
     private final List<Host> hosts;

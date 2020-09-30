@@ -12,7 +12,7 @@ import cs451.parser.Host;
 /**
  * Implements Eager Reliable Broadcast (p.76)
  */
-public class ReliableBroadcast implements Broadcast {
+class ReliableBroadcast implements Broadcast {
 
     private final Set<Message.IntPair> delivered = Collections.synchronizedSet(new HashSet<>());
     private final BestEffortBroadcast beb;

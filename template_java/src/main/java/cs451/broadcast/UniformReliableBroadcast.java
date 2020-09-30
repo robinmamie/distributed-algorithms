@@ -11,7 +11,7 @@ import cs451.Message;
 import cs451.listener.Listener;
 import cs451.parser.Host;
 
-public class UniformReliableBroadcast implements Broadcast {
+class UniformReliableBroadcast implements Broadcast {
 
     private final Set<Message.IntPair> pending = Collections.synchronizedSet(new HashSet<>());
     private final Set<Message.IntPair> delivered = Collections.synchronizedSet(new HashSet<>());
@@ -22,13 +22,11 @@ public class UniformReliableBroadcast implements Broadcast {
     public UniformReliableBroadcast(int port, Listener deliver, List<Host> hosts, int myId) {
         this.threshold = hosts.size() / 2;
         this.beb = new BestEffortBroadcast(port, (m, a, p) -> {
-            System.out.println("BEB delivered " + m);
             Message.IntPair id = m.getId();
             if (!pending.contains(id)) {
                 broadcast(new Message(m, myId));
             }
             acks.get(id).add(m.getLastHop());
-            System.out.println(acks.get(id).size());
             if (!delivered.contains(id) && acks.get(id).size() > threshold) {
                 delivered.add(id);
                 deliver.apply(m, null, 0);
