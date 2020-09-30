@@ -1,9 +1,12 @@
 package cs451;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.Socket;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
+import cs451.link.Link;
+import cs451.parser.Coordinator;
+import cs451.parser.Host;
+import cs451.parser.Parser;
 
 public class Main {
 
@@ -30,8 +33,7 @@ public class Main {
 
         initSignalHandlers();
 
-        // example
-        long pid = ProcessHandle.current().pid();
+        long pid = parser.pid();
         System.out.println("My PID is " + pid + ".");
         System.out.println("Use 'kill -SIGINT " + pid + " ' or 'kill -SIGTERM " + pid + " ' to stop processing packets.");
 
@@ -49,20 +51,48 @@ public class Main {
             System.out.println("Config: " + parser.config());
         }
 
-
         Coordinator coordinator = new Coordinator(parser.myId(), parser.barrierIp(), parser.barrierPort(), parser.signalIp(), parser.signalPort());
 
-	System.out.println("Waiting for all processes for finish initialization");
+        System.out.println("Waiting for all processes for finish initialization");
         coordinator.waitOnBarrier();
 
-	System.out.println("Broadcasting messages...");
+        System.out.println("Broadcasting messages...");
+        
+        // ---------------------------------------------------------------------
+        // Read config file, integer contained in it indicates the number of messages to broadcast
+        // TODO perfect links
+        // TODO URB
+        // TODO FIFO-broadcast
+        // TODO L-Causal broadcast
 
-	System.out.println("Signaling end of broadcasting messages");
+        Link link = Link.getLink(parser.hosts().get(parser.myId()-1).getPort());
+        link.addListener((m, a, p) -> System.out.println(m));
+
+        Message message = new Message(parser.myId(), 1, parser.myId() + " says hello!");
+        for (Host host: parser.hosts()) {
+            InetAddress address;
+            try {
+                address = InetAddress.getByName(host.getIp());
+            } catch (UnknownHostException e) {
+                System.err.println(e);
+                continue;
+            }
+            link.send(message, address, host.getPort());
+            link.send(message, address, host.getPort());
+            link.send(message, address, host.getPort());
+            link.send(message, address, host.getPort());
+            link.send(message, address, host.getPort());
+            link.send(message, address, host.getPort());
+        }
+
+        // ---------------------------------------------------------------------
+
+        System.out.println("Signaling end of broadcasting messages");
         coordinator.finishedBroadcasting();
 
-	while (true) {
-	    // Sleep for 1 hour
-	    Thread.sleep(60 * 60 * 1000);
-	}
+        while (true) {
+            // Sleep for 1 hour
+            Thread.sleep(60 * 60 * 1000);
+        }
     }
 }

@@ -1,15 +1,13 @@
-package cs451;
+package cs451.parser;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.DataOutputStream;
-import java.net.InetAddress;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.net.Socket;
-import java.net.UnknownHostException;
 
 public class Coordinator {
 
@@ -35,7 +33,7 @@ public class Coordinator {
 
     public void waitOnBarrier() {
         try {
-	    Socket socket = connectToHost(barrierIp, barrierPort);
+	        Socket socket = connectToHost(barrierIp, barrierPort);
             InputStream input = socket.getInputStream();
             InputStreamReader reader = new InputStreamReader(input);
             System.out.println("Accessing barrier...");
@@ -47,7 +45,7 @@ public class Coordinator {
     }
 
     public void finishedBroadcasting() {
-	try {
+	    try {
             signalSocket.close();
         } catch (IOException ex) {
             System.out.println("I/O error: " + ex.getMessage());
@@ -57,7 +55,7 @@ public class Coordinator {
     private Socket connectToHost(String ip, int port) {
         Socket socket = null;
         try {
-	    socket = new Socket(ip, port);
+	        socket = new Socket(ip, port);
             OutputStream output = socket.getOutputStream();
             DataOutputStream writer = new DataOutputStream(output);
 

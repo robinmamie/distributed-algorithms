@@ -1,4 +1,4 @@
-package cs451;
+package cs451.parser;
 
 import java.util.List;
 
@@ -66,6 +66,10 @@ public class Parser {
     private void help() {
         System.err.println("Usage: ./run.sh --id ID --hosts HOSTS --barrier NAME:PORT --signal NAME:PORT --output OUTPUT [config]");
         System.exit(1);
+    }
+
+    public long pid() {
+        return pid;
     }
 
     public int myId() {
