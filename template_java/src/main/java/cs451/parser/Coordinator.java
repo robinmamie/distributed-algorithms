@@ -37,8 +37,7 @@ public class Coordinator {
             InputStream input = socket.getInputStream();
             InputStreamReader reader = new InputStreamReader(input);
             System.out.println("Accessing barrier...");
-            int character;
-            while ((character = reader.read()) != -1) {}
+            while (reader.read() != -1) {}
         } catch (IOException ex) {
             System.out.println("I/O error: " + ex.getMessage());
         }

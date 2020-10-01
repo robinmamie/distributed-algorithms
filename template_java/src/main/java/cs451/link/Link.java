@@ -2,8 +2,8 @@ package cs451.link;
 
 import java.net.InetAddress;
 
-import cs451.Message;
-import cs451.listener.Listener;
+import cs451.listener.LinkListener;
+import cs451.message.Message;
 
 public interface Link {
 
@@ -21,9 +21,9 @@ public interface Link {
      */
     boolean send(Message message, InetAddress address, int port);
 
-    void addListener(Listener listener);
+    void addListener(LinkListener listener);
 
-    void removeListener(Listener listener);
+    void removeListener(LinkListener listener);
 
     static Link getLink(int port) {
         return new PerfectLink(port);

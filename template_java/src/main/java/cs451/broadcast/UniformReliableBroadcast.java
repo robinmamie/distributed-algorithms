@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import cs451.Message;
-import cs451.listener.Listener;
+import cs451.listener.BListener;
+import cs451.message.Message;
 import cs451.parser.Host;
 
 class UniformReliableBroadcast implements Broadcast {
@@ -19,19 +19,20 @@ class UniformReliableBroadcast implements Broadcast {
     private final BestEffortBroadcast beb;
     private final int threshold;
 
-    public UniformReliableBroadcast(int port, Listener deliver, List<Host> hosts, int myId) {
+    public UniformReliableBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
         this.threshold = hosts.size() / 2;
-        this.beb = new BestEffortBroadcast(port, (m, a, p) -> {
+        this.beb = new BestEffortBroadcast(port, hosts, m -> {
             Message.IntPair id = m.getId();
             if (!pending.contains(id)) {
+                pending.add(id);
                 broadcast(new Message(m, myId));
             }
             acks.get(id).add(m.getLastHop());
             if (!delivered.contains(id) && acks.get(id).size() > threshold) {
                 delivered.add(id);
-                deliver.apply(m, null, 0);
+                deliver.apply(m);
             }
-        }, hosts);
+        });
     }
 
     @Override

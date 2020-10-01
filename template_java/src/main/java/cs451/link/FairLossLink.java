@@ -6,7 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 
-import cs451.Message;
+import cs451.message.Message;
 
 class FairLossLink extends AbstractLink {
 
@@ -38,6 +38,7 @@ class FairLossLink extends AbstractLink {
             return false;
         }
         byte[] buf = message.serialize();
+        //System.out.println(buf.length);
         DatagramPacket packet = new DatagramPacket(buf, buf.length, address, port);
         try {
             listen_socket.send(packet);
@@ -55,11 +56,13 @@ class FairLossLink extends AbstractLink {
             Message message = null;
             try {
                 listen_socket.receive(packet);
+                // TODO enqueue packet to get back to listening as fast as possible (copy packet)
                 byte[] datagram = packet.getData();
-                message = Message.unserialize(datagram);
+                message = Message.deserialize(datagram);
             } catch (IOException e) {
                 continue;
             }
+            // TODO create new thread
             handleListeners(message, packet.getAddress(), packet.getPort());
         }
     }

@@ -1,4 +1,4 @@
-package cs451;
+package cs451.message;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -134,6 +134,7 @@ public class Message implements Serializable {
         return (ack ? "Ack" : "Message") + " #" + messageId + " from " + originId;
     }
 
+    // TODO custom serialization for better performance (max 13 bytes of content, 3*4 + 1)
     public byte[] serialize() {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream out = null;
@@ -155,7 +156,7 @@ public class Message implements Serializable {
         return datagram;
     }
 
-    public static Message unserialize(byte[] datagram) {
+    public static Message deserialize(byte[] datagram) {
         // TODO corrupted packets? Should we crash?
         ByteArrayInputStream bis = new ByteArrayInputStream(datagram);
         ObjectInput in = null;

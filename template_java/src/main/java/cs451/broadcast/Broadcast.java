@@ -2,14 +2,13 @@ package cs451.broadcast;
 
 import java.util.List;
 
-import cs451.Message;
-import cs451.listener.Listener;
-import cs451.parser.Host;
+import cs451.message.Message;
+import cs451.parser.Parser;
 
 public interface Broadcast {
     void broadcast(Message m);
 
-    static Broadcast getBroadcast(int myPort, Listener l, List<Host> hosts, int myId) {
-        return new UniformReliableBroadcast(myPort, l, hosts, myId);
+    static void handle(boolean isFifo, Parser parser, List<String> toOutput) {
+        BroadcastHandler.start(isFifo, parser, toOutput);
     }
 }

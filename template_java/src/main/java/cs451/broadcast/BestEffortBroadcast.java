@@ -4,9 +4,9 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 
-import cs451.Message;
 import cs451.link.Link;
-import cs451.listener.Listener;
+import cs451.listener.BListener;
+import cs451.message.Message;
 import cs451.parser.Host;
 
 class BestEffortBroadcast implements Broadcast {
@@ -14,9 +14,9 @@ class BestEffortBroadcast implements Broadcast {
     private final Link link;
     private final List<Host> hosts;
 
-    public BestEffortBroadcast(int port, Listener deliver, List<Host> hosts) {
+    public BestEffortBroadcast(int port, List<Host> hosts, BListener deliver) {
         this.link = Link.getLink(port);
-        link.addListener(deliver);
+        link.addListener((m, a, p) -> deliver.apply(m));
         this.hosts = hosts;
     }
 

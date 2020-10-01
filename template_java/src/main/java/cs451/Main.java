@@ -1,9 +1,10 @@
 package cs451;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import cs451.broadcast.Broadcast;
@@ -13,12 +14,26 @@ import cs451.parser.Parser;
 
 public class Main {
 
+    private static String outputFile;
+    private static List<String> toOutput = Collections.synchronizedList(new ArrayList<>());
+
     private static void handleSignal() {
         //immediately stop network packet processing
         System.out.println("Immediately stopping network packet processing.");
 
         //write/flush output file if necessary
         System.out.println("Writing output.");
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+            if (toOutput.isEmpty()) {
+                writer.newLine();
+            }
+            for (String line: toOutput) {
+                writer.write(line);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            // Ignore
+        }
     }
 
     private static void initSignalHandlers() {
@@ -28,16 +43,6 @@ public class Main {
                 handleSignal();
             }
         });
-    }
-
-    private static int readConfig(String path) {
-        try (BufferedReader br = new BufferedReader(new FileReader(path))) {
-            String line = br.readLine();
-            return Integer.parseInt(line);
-        } catch (IOException e) {
-            System.err.println("Problem with the config file!");
-            return 0;
-        }
     }
 
     public static void main(String[] args) throws InterruptedException {
@@ -59,6 +64,7 @@ public class Main {
         System.out.println("Barrier: " + parser.barrierIp() + ":" + parser.barrierPort());
         System.out.println("Signal: " + parser.signalIp() + ":" + parser.signalPort());
         System.out.println("Output: " + parser.output());
+        outputFile = parser.output();
         // if config is defined; always check before parser.config()
         if (parser.hasConfig()) {
             System.out.println("Config: " + parser.config());
@@ -74,20 +80,9 @@ public class Main {
         // ---------------------------------------------------------------------
         // TODO FIFO-broadcast
         // TODO L-Causal broadcast
-
-        int nbMessages = readConfig(parser.config());
-        int myPort = parser.hosts().get(parser.myId()-1).getPort();
-        List<Message> messages = new ArrayList<>();
-        for (int i = 1; i <= nbMessages; ++i) {
-            messages.add(new Message(parser.myId(), i));
-        }
-
-        Broadcast b = Broadcast.getBroadcast(myPort, (m, a, d) -> {
-            System.out.println(m + " has been uniformly, reliably broadcast.");
-        }, parser.hosts(), parser.myId());
-        for (Message m: messages) {
-            b.broadcast(m);
-        }
+        final boolean fifo = true;
+        //final boolean lcausal = false;
+        Broadcast.handle(fifo, parser, toOutput);
 
         // ---------------------------------------------------------------------
 

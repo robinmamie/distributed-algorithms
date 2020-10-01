@@ -5,8 +5,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import cs451.Message;
-import cs451.listener.Listener;
+import cs451.listener.LinkListener;
+import cs451.message.Message;
 
 public class StubbornLink extends AbstractLink {
 
@@ -30,7 +30,7 @@ public class StubbornLink extends AbstractLink {
         Condition acked = lock.newCondition();
         boolean noAck = true;
 
-        Listener confirmAck = (m, a, p) -> {
+        LinkListener confirmAck = (m, a, p) -> {
             if (m.isAck(message) && a.equals(address) && p == port) {
                 synchronized (lock) {
                     acked.signalAll();
@@ -46,7 +46,7 @@ public class StubbornLink extends AbstractLink {
                     noAck = (acked.awaitNanos(TIMEOUT) == 0);
                     lock.unlock();
                 } catch (InterruptedException e) {
-                    // Ignore (?)
+                    // Ignore
                 }
             }
         }
