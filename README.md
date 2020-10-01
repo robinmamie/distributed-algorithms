@@ -92,7 +92,7 @@ The templates provided come with a command line interface (CLI) that you should 
 
 The supported arguments are:
 ```sh
-./run.sh --id ID --hosts HOSTS --barrier NAME:PORT --output OUTPUT [config]
+./run.sh --id ID --hosts HOSTS --barrier NAME:PORT --signal NAME:PORT --output OUTPUT [config]
 ```
 
 Where:
@@ -107,11 +107,16 @@ Where:
   ```
   **Note**: The processes should listen for incoming messages in the port range `11000` to `11999` inclusive.
 
-  - `NAME:PORT` specifies the IP/Name and port of the barrier, which ensures that all processes have been intialized before the broacasting starts. The barrier is implemented using TCP and it is the only place in the source code where TCP is allowed. You can run the barrier as:
+  - `NAME:PORT` for `--barrier` specifies the IP/Name and port of the barrier, which ensures that all processes have been intialized before the broacasting starts. The barrier is implemented using TCP and it is one of the two places (the other is for the `--signal` argument) in the source code where TCP is allowed. You can run the barrier as:
 ```sh
 ./barrier.py [-h] [--host HOST] [--port PORT] --processes PROCESSES
 ```
-E.g. to wait for 3 processes, run `./barrier.py --processes 3`. When 3 connections are established to the barrier, the barrier closes all the connections, signaling the processes to start. The barrier cannot be used twice, meaning that you need to restart it every time you want to run you application. Also, it must be started before any other process. 
+E.g. to wait for 3 processes, run `./barrier.py --processes 3`. When 3 connections are established to the barrier, the barrier closes all the connections, signaling the processes to start. The barrier cannot be used twice, meaning that you need to restart it every time you want to run you application. Also, it must be started before any other process.
+ - `NAME:PORT` for `--signal` specifies the IP/Name and port of the service (notification handler) that handles the notifications sent by processes when they finish broadcasting. This notification is used to measure the time processes spend broadcasting messages: it is the time period between the release of the barrier up until this notification is sent.  The notification mechanism is implemented using TCP and it is one of the two places (the other is for the `--barrier` argument) in the source code where TCP is allowed. You can run the notification handler as:
+```sh
+./finishedSignal.py [-h] [--host HOST] [--port PORT] --processes PROCESSES
+```
+Note: Start both `finishedSignal.py` and `barrier.py` before you start any other process and provide the same number of `--processes` for both.
   - `OUTPUT` specifies the path to a text file where a process stores its output. The text file contains a log of events.  Each event is represented by one line of the output file, terminated by a Unix-style line break `\n`. There are two types of events to be logged:
     -  broadcast of application message, using the format `b`*`seq_nr`*,
   where `seq_nr` is the sequence number of the message.
