@@ -14,10 +14,8 @@ public class FifoBroadcast implements Broadcast {
     private final UniformReliableBroadcast urb;
     private final Map<Integer, Integer> delivered = new ConcurrentHashMap<>();
     private final Map<Integer, Set<Integer>> past = new ConcurrentHashMap<>();
-    private final int myId;
 
     public FifoBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
-        this.myId = myId;
         for (int i = 1; i <= hosts.size(); ++i) {
             delivered.put(i, 1);
             past.put(i, ConcurrentHashMap.newKeySet());

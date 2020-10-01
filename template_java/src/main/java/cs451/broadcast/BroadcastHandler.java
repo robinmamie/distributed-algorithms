@@ -29,11 +29,11 @@ public class BroadcastHandler {
         // Broadcast
         int nbMessages = readConfig(parser.config());
         for (int i = 1; i <= nbMessages; ++i) {
-            b.broadcast(new Message(parser.myId(), i));
-            synchronized (toOutput) {
-                // TODO when to write broadcast? Here?
-                toOutput.add("b " + i);
-            }
+            final Message m = new Message(parser.myId(), i);
+            new Thread(() -> {
+                b.broadcast(m);
+            }).start();
+            toOutput.add("b " + m.getMessageId());
         }
     }
 
