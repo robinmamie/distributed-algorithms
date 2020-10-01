@@ -1,9 +1,8 @@
 package cs451.broadcast;
 
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import cs451.listener.BListener;
 import cs451.message.Message;
@@ -14,7 +13,7 @@ import cs451.parser.Host;
  */
 class ReliableBroadcast implements Broadcast {
 
-    private final Set<Message.IntPair> delivered = Collections.synchronizedSet(new HashSet<>());
+    private final Set<Message.IntPair> delivered = ConcurrentHashMap.newKeySet();
     private final BestEffortBroadcast beb;
     private final BListener deliver;
 

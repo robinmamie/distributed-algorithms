@@ -1,9 +1,8 @@
 package cs451.link;
 
 import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import cs451.listener.LinkListener;
 import cs451.message.Message;
@@ -11,7 +10,7 @@ import cs451.message.Message;
 abstract class AbstractLink implements Link {
 
     // TODO look for better data structure
-    private final List<LinkListener> listeners = Collections.synchronizedList(new ArrayList<>());
+    private final List<LinkListener> listeners = new CopyOnWriteArrayList<>();
 
     @Override
     abstract public boolean send(Message message, InetAddress address, int port);

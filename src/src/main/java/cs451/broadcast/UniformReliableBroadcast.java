@@ -1,11 +1,9 @@
 package cs451.broadcast;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import cs451.listener.BListener;
 import cs451.message.Message;
@@ -13,9 +11,9 @@ import cs451.parser.Host;
 
 class UniformReliableBroadcast implements Broadcast {
 
-    private final Set<Message.IntPair> pending = Collections.synchronizedSet(new HashSet<>());
-    private final Set<Message.IntPair> delivered = Collections.synchronizedSet(new HashSet<>());
-    private final Map<Message.IntPair, Set<Integer>> acks = Collections.synchronizedMap(new HashMap<>());
+    private final Set<Message.IntPair> pending = ConcurrentHashMap.newKeySet();
+    private final Set<Message.IntPair> delivered = ConcurrentHashMap.newKeySet();
+    private final Map<Message.IntPair, Set<Integer>> acks = new ConcurrentHashMap<>();
     private final BestEffortBroadcast beb;
     private final int threshold;
 
@@ -44,6 +42,6 @@ class UniformReliableBroadcast implements Broadcast {
     private void addNewMessage(Message m) {
         Message.IntPair id = m.getId();
         pending.add(id);
-        acks.put(id, Collections.synchronizedSet(new HashSet<>()));
+        acks.put(id, ConcurrentHashMap.newKeySet());
     }
 }

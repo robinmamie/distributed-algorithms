@@ -3,9 +3,8 @@ package cs451;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import cs451.broadcast.Broadcast;
 import cs451.parser.Coordinator;
@@ -15,7 +14,7 @@ import cs451.parser.Parser;
 public class Main {
 
     private static String outputFile;
-    private static List<String> toOutput = Collections.synchronizedList(new ArrayList<>());
+    private static List<String> toOutput = new CopyOnWriteArrayList<>();
 
     private static void handleSignal() {
         //immediately stop network packet processing

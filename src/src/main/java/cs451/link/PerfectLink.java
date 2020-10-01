@@ -1,17 +1,15 @@
 package cs451.link;
 
 import java.net.InetAddress;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import cs451.message.Message;
 
 class PerfectLink extends AbstractLink {
 
     private final StubbornLink sLink;
-    // TODO low performance synchronization (?), could use timestamp-based messages (p.40) -> see Java concurrent collections
-    private final Set<Message.IntTriple> delivered = Collections.synchronizedSet(new HashSet<>());
+    private final Set<Message.IntTriple> delivered = ConcurrentHashMap.newKeySet();
 
     public PerfectLink(int port) {
         this.sLink = new StubbornLink(port);
