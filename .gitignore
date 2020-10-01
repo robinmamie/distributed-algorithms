@@ -6,3 +6,4 @@ logs
 .vscode
 
 *.log
+src/*.txt

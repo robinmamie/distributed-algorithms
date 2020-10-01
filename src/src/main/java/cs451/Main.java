@@ -81,7 +81,7 @@ public class Main {
         // TODO L-Causal broadcast
         final boolean fifo = true;
         //final boolean lcausal = false;
-        Broadcast.handle(fifo, parser, toOutput);
+        Broadcast b = Broadcast.handle(fifo, parser, toOutput);
 
         // ---------------------------------------------------------------------
 

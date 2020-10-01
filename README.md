@@ -1,7 +1,11 @@
 # Distributed Algorithms 2020/21 - EPFL
 
+## TODO
 
-# Overview
+- [ ] Fix links: under adversarial coniditions (packet loss, etc.), the broadcast seems to not be perfect.
+- [ ] Handle INTs correctly: under adversarial conditions (SIGINT, SIGSTOP, etc.), some threads seem to die and not recover correctly.
+
+## Overview
 The goal of this practical project is to implement certain building blocks necessary for a decentralized system. To this end, some underlying abstractions will be used:
 
   - Perfect Links,

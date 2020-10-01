@@ -13,7 +13,7 @@ abstract class AbstractLink implements Link {
     private final List<LinkListener> listeners = new CopyOnWriteArrayList<>();
 
     @Override
-    abstract public boolean send(Message message, InetAddress address, int port);
+    abstract public void send(Message message, InetAddress address, int port);
 
     @Override
     public void addListener(LinkListener listener) {
@@ -27,10 +27,8 @@ abstract class AbstractLink implements Link {
 
     protected void handleListeners(Message m, InetAddress a, int p) {
         if (m != null) {
-            synchronized (listeners) {
-                for (LinkListener listener: listeners) {
-                    listener.apply(m, a, p);
-                }
+            for (LinkListener listener: listeners) {
+                listener.apply(m, a, p);
             }
         }
     }

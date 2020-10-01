@@ -25,7 +25,7 @@ public class StubbornLink extends AbstractLink {
     }
 
     @Override
-    public boolean send(Message message, InetAddress address, int port) {
+    public void send(Message message, InetAddress address, int port) {
         final Lock lock = new ReentrantLock();
         Condition acked = lock.newCondition();
         boolean noAck = true;
@@ -40,18 +40,17 @@ public class StubbornLink extends AbstractLink {
 
         flLink.addListener(confirmAck);
         while (noAck) {
-            if (flLink.send(message, address, port)) {
-                try {
+            try {
+                while (noAck) {
+                    flLink.send(message, address, port);
                     lock.lock();
                     noAck = (acked.awaitNanos(TIMEOUT) == 0);
                     lock.unlock();
-                } catch (InterruptedException e) {
-                    // Ignore
                 }
+            } catch (InterruptedException e) {
+                // Ignore
             }
         }
         flLink.removeListener(confirmAck);
-
-        return true;
     }    
 }

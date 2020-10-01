@@ -23,9 +23,8 @@ class PerfectLink extends AbstractLink {
     }
 
     @Override
-    public boolean send(Message message, InetAddress address, int port) {
-        new Thread(() -> sLink.send(message, address, port)).start();
-        return true;
+    public void send(Message message, InetAddress address, int port) {
+        sLink.send(message, address, port);
     }
 
 }

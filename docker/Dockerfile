@@ -16,9 +16,7 @@ RUN apt-get -y install file unzip zip xz-utils git \
 
 ADD docker/apache-maven-3.6.3-bin.tar.gz /usr/local
 RUN ln -s /usr/local/apache-maven-3.6.3/bin/mvn /usr/local/bin
-COPY template_cpp /root/template_cpp
-COPY template_java /root/template_java
+COPY src /root/src
 ADD barrier.py /root
 
-RUN /root/template_cpp/build.sh && /root/template_cpp/cleanup.sh
-RUN /root/template_java/build.sh && /root/template_java/cleanup.sh
+RUN /root/src/build.sh && /root/src/cleanup.sh
