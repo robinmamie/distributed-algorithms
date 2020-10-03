@@ -77,11 +77,10 @@ public class Main {
         System.out.println("Broadcasting messages...");
         
         // ---------------------------------------------------------------------
-        // TODO FIFO-broadcast
         // TODO L-Causal broadcast
         final boolean fifo = true;
         //final boolean lcausal = false;
-        Broadcast b = Broadcast.handle(fifo, parser, toOutput);
+        Broadcast.handle(fifo, parser, toOutput);
 
         // ---------------------------------------------------------------------
 

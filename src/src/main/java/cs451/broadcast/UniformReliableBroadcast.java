@@ -19,13 +19,13 @@ class UniformReliableBroadcast implements Broadcast {
 
     public UniformReliableBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
         this.threshold = hosts.size() / 2;
-        this.beb = new BestEffortBroadcast(port, hosts, m -> {
+        this.beb = new BestEffortBroadcast(port, hosts, myId, m -> {
             Message.IntPair id = m.getId();
             if (!pending.contains(id)) {
-                pending.add(id);
-                broadcast(new Message(m, myId));
+                broadcast(m);
+            } else {
+                acks.get(id).add(m.getLastHop());
             }
-            acks.get(id).add(m.getLastHop());
             if (!delivered.contains(id) && acks.get(id).size() > threshold) {
                 delivered.add(id);
                 deliver.apply(m);
@@ -41,7 +41,8 @@ class UniformReliableBroadcast implements Broadcast {
 
     private void addNewMessage(Message m) {
         Message.IntPair id = m.getId();
-        pending.add(id);
         acks.put(id, ConcurrentHashMap.newKeySet());
+        acks.get(id).add(m.getLastHop());
+        pending.add(id);
     }
 }

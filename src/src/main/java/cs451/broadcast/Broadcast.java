@@ -8,7 +8,7 @@ import cs451.parser.Parser;
 public interface Broadcast {
     void broadcast(Message m);
 
-    static Broadcast handle(boolean isFifo, Parser parser, List<String> toOutput) {
-        return BroadcastHandler.start(isFifo, parser, toOutput);
+    static void handle(boolean isFifo, Parser parser, List<String> toOutput) {
+        BroadcastHandler.start(isFifo, parser, toOutput);
     }
 }

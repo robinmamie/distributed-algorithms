@@ -11,6 +11,8 @@ import cs451.message.Message;
 
 class FairLossLink extends AbstractLink {
 
+    private static final int NB_LISTENER_HANDLERS = 5;
+
     private final DatagramSocket socket;
     private final BlockingQueue<DatagramPacket> sendQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<DatagramPacket> receiveQueue = new LinkedBlockingQueue<>();
@@ -24,7 +26,9 @@ class FairLossLink extends AbstractLink {
 
         new Thread(() -> listen(port)).start();
         new Thread(() -> sendPackets()).start();
-        new Thread(() -> handleListenersLowLevel()).start();
+        for (int i = 0; i < NB_LISTENER_HANDLERS; ++i) {
+            new Thread(() -> handleListenersLowLevel()).start();
+        }
     }
 
     @Override
@@ -34,10 +38,11 @@ class FairLossLink extends AbstractLink {
         while (true) {
             try {
                 sendQueue.put(packet);
-                break;
             } catch (InterruptedException e) {
-                // Ignore
+                System.err.println("INTERRUPTED");
+                continue;
             }
+            break;
         }
     }
 
@@ -75,10 +80,11 @@ class FairLossLink extends AbstractLink {
             while (true) {
                 try {
                     packet = receiveQueue.take();
-                    break;
                 } catch (InterruptedException e) {
-                    // Ignore
+                    System.err.println("INTERRUPTED");
+                    continue;
                 }
+                break;
             }
             byte[] datagram = packet.getData();
             Message message = Message.deserialize(datagram);

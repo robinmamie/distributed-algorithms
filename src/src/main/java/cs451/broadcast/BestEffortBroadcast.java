@@ -13,15 +13,18 @@ class BestEffortBroadcast implements Broadcast {
 
     private final Link link;
     private final List<Host> hosts;
+    private final int myId;
 
-    public BestEffortBroadcast(int port, List<Host> hosts, BListener deliver) {
+    public BestEffortBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
         this.link = Link.getLink(port);
+        this.myId = myId;
         link.addListener((m, a, p) -> deliver.apply(m));
         this.hosts = hosts;
     }
 
     @Override
     public void broadcast(Message m) {
+        m = new Message(m, myId);
         for (Host host: hosts) {
             try {
                 link.send(m, InetAddress.getByName(host.getIp()), host.getPort());

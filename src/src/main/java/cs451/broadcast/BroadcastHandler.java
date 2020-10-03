@@ -12,36 +12,41 @@ import cs451.parser.Parser;
 
 public class BroadcastHandler {
 
-    static Broadcast start(boolean isFifo, Parser parser, List<String> toOutput) {
+    static void start(boolean isFifo, Parser parser, List<String> toOutput) {
         if (isFifo) {
-            return startFifo(parser, toOutput);
+            startFifo(parser, toOutput);
+        } else {
+            startLCausal(parser);
         }
-        return startLCausal(parser);
     }
 
-    private static Broadcast startFifo(Parser parser, List<String> toOutput) {
-        int myPort = parser.hosts().get(parser.myId() - 1).getPort();
+    private static void startFifo(Parser parser, List<String> toOutput) {
+        int nbMessages = readConfig(parser.config());
+        final int N = nbMessages;
 
         BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
-        Broadcast b = new FifoBroadcast(myPort, parser.hosts(), parser.myId(), m -> {
-            toOutput.add("d " + m.getOriginId() + " " + m.getMessageId());
-            while (true) {
-                try {
-                    queue.put(true);
+        new Thread(() -> {
+            int myPort = parser.hosts().get(parser.myId() - 1).getPort();
+            Broadcast b = new FifoBroadcast(myPort, parser.hosts(), parser.myId(), m -> {
+                toOutput.add("d " + m.getOriginId() + " " + m.getMessageId());
+                while (true) {
+                    try {
+                        queue.put(true);
+                    } catch (InterruptedException e) {
+                        System.err.println("INTERRUPTED");
+                        continue;
+                    }
                     break;
-                } catch (InterruptedException e) {
-                    // Ignore
                 }
-            }
-        });
+            });
 
-        // Broadcast
-        int nbMessages = readConfig(parser.config());
-        for (int i = 1; i <= nbMessages; ++i) {
-            final Message m = new Message(parser.myId(), i);
-            b.broadcast(m);
-            toOutput.add("b " + m.getMessageId());
-        }
+            // Broadcast
+            for (int i = 1; i <= N; ++i) {
+                final Message m = new Message(parser.myId(), i);
+                b.broadcast(m);
+                toOutput.add("b " + m.getMessageId());
+            }
+        }).start();
         while (nbMessages > 0) {
             try {
                 while (nbMessages > 0) {
@@ -50,12 +55,12 @@ public class BroadcastHandler {
                 }
             } catch (InterruptedException e) {
                 // Ignore
+                System.err.println("INTERRUPTED");
             }
         }
-        return b;
     }
 
-    private static Broadcast startLCausal(Parser parser) {
+    private static void startLCausal(Parser parser) {
         throw new RuntimeException("LCausal-Broadcast not implemented!");
     }
 

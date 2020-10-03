@@ -19,11 +19,11 @@ class ReliableBroadcast implements Broadcast {
 
     public ReliableBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
         this.deliver = deliver;
-        this.beb = new BestEffortBroadcast(port, hosts, m -> {
+        this.beb = new BestEffortBroadcast(port, hosts, myId, m -> {
             Message.IntPair id = m.getId();
             if (!delivered.contains(id)) {
                 // TODO attention, hopefully it is the same than what is asked (p.76)
-                broadcast(new Message(m, myId));
+                broadcast(m);
             }
         });
     }

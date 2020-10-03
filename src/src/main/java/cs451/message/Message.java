@@ -1,11 +1,5 @@
 package cs451.message;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 public class Message implements Serializable {
@@ -58,18 +52,26 @@ public class Message implements Serializable {
     private final int lastHop;
     private final boolean ack;
 
-    public Message(int originId, int messageId) {
+    private Message(int originId, int messageId, int lastHop, boolean ack) {
         this.originId = originId;
         this.messageId = messageId;
-        this.lastHop = originId;
-        this.ack = false;
+        this.lastHop = lastHop;
+        this.ack = ack;
+    }
+
+    public Message(int originId, int messageId) {
+        this(originId, messageId, originId, false);
     }
 
     public Message(int originId, int messageId, boolean ack) {
-        this.originId = originId;
-        this.messageId = messageId;
-        this.lastHop = originId;
-        this.ack = ack;
+        this(originId, messageId, originId, ack);
+    }
+
+    private Message(Message that, boolean ack) {
+        this.originId = that.originId;
+        this.messageId = that.messageId;
+        this.lastHop = that.lastHop;
+        this.ack = true;
     }
 
     public Message(Message that, int lastHop) {
@@ -79,12 +81,6 @@ public class Message implements Serializable {
         this.ack = false;
     }
 
-    private Message(Message that) {
-        this.originId = that.originId;
-        this.messageId = that.messageId;
-        this.lastHop = that.originId;
-        this.ack = true;
-    }
 
     public int getOriginId() {
         return originId;
@@ -117,7 +113,7 @@ public class Message implements Serializable {
     }
 
     public Message toAck() {
-        return new Message(this);
+        return new Message(this, true);
     }
 
     @Override
@@ -131,53 +127,43 @@ public class Message implements Serializable {
 
     @Override
     public String toString() {
-        return (ack ? "Ack" : "Message") + " #" + messageId + " from " + originId;
+        return (ack ? "Ack" : "Message") + " #" + messageId + " from " + originId + ", last hop " + lastHop;
     }
 
-    // TODO custom serialization for better performance (max 13 bytes of content, 3*4 + 1)
+    private static final byte fullMask = (byte) 0xff;
+
+    private void intToByte(int integer, byte[] array, int offset) {
+        array[offset+0] = (byte)((integer >> 24) & fullMask);
+        array[offset+1] = (byte)((integer >> 16) & fullMask);
+        array[offset+2] = (byte)((integer >> 8) & fullMask);
+        array[offset+3] = (byte)((integer) & fullMask);
+    }
+
     public byte[] serialize() {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream out = null;
-        byte[] datagram = null;
-        try {
-            out = new ObjectOutputStream(bos);
-            out.writeObject(this);
-            out.flush();
-            datagram = bos.toByteArray();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } finally {
-            try {
-                bos.close();
-            } catch (IOException e) {
-                // Ignore close exception
-            }
-        }
+        final int parameterSize = Integer.BYTES;
+        byte[] datagram = new byte[parameterSize*3 + 1];
+        intToByte(getOriginId(), datagram, 0);
+        intToByte(getMessageId(), datagram, parameterSize);
+        intToByte(getLastHop(), datagram, parameterSize*2);
+        datagram[parameterSize*3] = isAck() ? fullMask : 0;
         return datagram;
     }
 
+    private static int byteToInt(byte[] array, int offset) {
+        int integer = 0;
+        integer += array[offset+0] << 24;
+        integer += array[offset+1] << 16;
+        integer += array[offset+2] << 8;
+        integer += array[offset+3];
+        return integer;
+    }
+
     public static Message deserialize(byte[] datagram) {
-        // TODO corrupted packets? Should we crash?
-        ByteArrayInputStream bis = new ByteArrayInputStream(datagram);
-        ObjectInput in = null;
-        Message message = null;
-        try {
-            in = new ObjectInputStream(bis);
-            Object o = in.readObject();
-            message = (Message) o;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        } finally {
-            try {
-                if (in != null) {
-                    in.close();
-                }
-            } catch (IOException ex) {
-                // Ignore close exception
-            }
-        }
-        return message;
+        final int parameterSize = Integer.BYTES;
+        int originId = byteToInt(datagram, 0);
+        int messageId = byteToInt(datagram, parameterSize);
+        int lastHop = byteToInt(datagram, parameterSize*2);
+        boolean ack = datagram[parameterSize*3] != 0;
+        return new Message(originId, messageId, lastHop, ack);
     }
 }

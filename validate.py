@@ -380,6 +380,7 @@ def main(processes, messages, runscript, broadcastType, logsDir, testConfig):
         initBarrierThread.join()
         print("All processes have been initialized.")
 
+        # TODO FIXME
         st.run()
         print("StressTest is complete.")
 
