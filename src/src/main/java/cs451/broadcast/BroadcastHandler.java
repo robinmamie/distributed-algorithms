@@ -29,14 +29,11 @@ public class BroadcastHandler {
             int myPort = parser.hosts().get(parser.myId() - 1).getPort();
             Broadcast b = new FifoBroadcast(myPort, parser.hosts(), parser.myId(), m -> {
                 toOutput.add("d " + m.getOriginId() + " " + m.getMessageId());
-                while (true) {
-                    try {
-                        queue.put(true);
-                    } catch (InterruptedException e) {
-                        System.err.println("INTERRUPTED");
-                        continue;
-                    }
-                    break;
+                try {
+                    queue.put(true);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
                 }
             });
 
@@ -47,16 +44,13 @@ public class BroadcastHandler {
                 toOutput.add("b " + m.getMessageId());
             }
         }).start();
-        while (nbMessages > 0) {
-            try {
-                while (nbMessages > 0) {
-                    queue.take();
-                    nbMessages -= 1;
-                }
-            } catch (InterruptedException e) {
-                // Ignore
-                System.err.println("INTERRUPTED");
+        try {
+            while (nbMessages > 0) {
+                queue.take();
+                nbMessages -= 1;
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

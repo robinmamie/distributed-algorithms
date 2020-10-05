@@ -35,14 +35,10 @@ class FairLossLink extends AbstractLink {
     public void send(Message message, InetAddress address, int port) {
         byte[] buf = message.serialize();
         DatagramPacket packet = new DatagramPacket(buf, buf.length, address, port);
-        while (true) {
-            try {
-                sendQueue.put(packet);
-            } catch (InterruptedException e) {
-                System.err.println("INTERRUPTED");
-                continue;
-            }
-            break;
+        try {
+            sendQueue.put(packet);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -77,14 +73,11 @@ class FairLossLink extends AbstractLink {
     private void handleListenersLowLevel() {
         while (true) {
             DatagramPacket packet;
-            while (true) {
-                try {
-                    packet = receiveQueue.take();
-                } catch (InterruptedException e) {
-                    System.err.println("INTERRUPTED");
-                    continue;
-                }
-                break;
+            try {
+                packet = receiveQueue.take();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
             }
             byte[] datagram = packet.getData();
             Message message = Message.deserialize(datagram);

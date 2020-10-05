@@ -16,18 +16,20 @@ class UniformReliableBroadcast implements Broadcast {
     private final Map<Message.IntPair, Set<Integer>> acks = new ConcurrentHashMap<>();
     private final BestEffortBroadcast beb;
     private final int threshold;
+    private final int myId;
 
     public UniformReliableBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
         this.threshold = hosts.size() / 2;
+        this.myId = myId;
         this.beb = new BestEffortBroadcast(port, hosts, myId, m -> {
             Message.IntPair id = m.getId();
-            if (!pending.contains(id)) {
+            if (!pending.contains(id) && !delivered.contains(id)) {
                 broadcast(m);
-            } else {
-                acks.get(id).add(m.getLastHop());
             }
+            acks.get(id).add(m.getLastHop());
             if (!delivered.contains(id) && acks.get(id).size() > threshold) {
                 delivered.add(id);
+                pending.remove(id);
                 deliver.apply(m);
             }
         });
@@ -35,14 +37,11 @@ class UniformReliableBroadcast implements Broadcast {
 
     @Override
     public void broadcast(Message m) {
-        addNewMessage(m);
-        beb.broadcast(m);
-    }
-
-    private void addNewMessage(Message m) {
         Message.IntPair id = m.getId();
         acks.put(id, ConcurrentHashMap.newKeySet());
-        acks.get(id).add(m.getLastHop());
+        acks.get(id).add(myId);
         pending.add(id);
+
+        beb.broadcast(m);
     }
 }

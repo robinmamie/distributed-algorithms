@@ -43,14 +43,10 @@ public class StubbornLink extends AbstractLink {
 
     @Override
     public void send(Message message, InetAddress address, int port) {
-        while (true) {
-            try {
-                sendQueue.put(new CustomPacket(message, address, port));
-            } catch (InterruptedException e) {
-                System.err.println("INTERRUPTED");
-                continue;
-            }
-            break;
+        try {
+            sendQueue.put(new CustomPacket(message, address, port));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -61,9 +57,9 @@ public class StubbornLink extends AbstractLink {
             CustomPacket cp;
             try {
                 cp = sendQueue.take();
-            } catch (InterruptedException e1) {
-                System.err.println("INTERRUPTED");
-                continue;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
             }
 
             Message message = cp.message;
@@ -72,14 +68,10 @@ public class StubbornLink extends AbstractLink {
 
             LinkListener confirmAck = (m, a, p) -> {
                 if (m.isAck(message) && a.equals(address) && p == port) {
-                    while (true) {
-                        try {
-                            communicationQueue.put(true);
-                        } catch (InterruptedException e) {
-                            System.err.println("INTERRUPTED");
-                            continue;
-                        }
-                        break;
+                    try {
+                        communicationQueue.put(true);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
                     }
                 }
             };
@@ -90,8 +82,8 @@ public class StubbornLink extends AbstractLink {
                 try {
                     noAck = (communicationQueue.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS) == null);
                 } catch (InterruptedException e) {
-                    // Ignore
-                    System.err.println("INTERRUPTED");
+                    Thread.currentThread().interrupt();
+                    return;
                 }
             }
             flLink.removeListener(confirmAck);

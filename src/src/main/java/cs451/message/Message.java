@@ -47,6 +47,7 @@ public class Message implements Serializable {
         }
     }
 
+    // note: ID is maximum 1 byte!
     private final int originId;
     private final int messageId;
     private final int lastHop;
@@ -150,12 +151,18 @@ public class Message implements Serializable {
     }
 
     private static int byteToInt(byte[] array, int offset) {
-        int integer = 0;
+        int ret = 0;
+        for (int i=offset; i<Integer.BYTES+offset; i++) {
+            ret <<= 8;
+            ret |= (int)array[i] & 0xFF;
+        }
+        return ret;
+        /*int integer = 0;
         integer += array[offset+0] << 24;
         integer += array[offset+1] << 16;
         integer += array[offset+2] << 8;
         integer += array[offset+3];
-        return integer;
+        return integer;*/
     }
 
     public static Message deserialize(byte[] datagram) {
