@@ -96,7 +96,7 @@ The supported arguments are:
 ```
 
 Where:
-  - `ID` specifies the unique identifier of the process. In a system of `m` processes, the identifiers are `1`...`m`.
+  - `ID` specifies the unique identifier of the process. In a system of `n` processes, the identifiers are `1`...`n`.
   - `HOSTS` specifies the path to a file that contains the information about every process in the system, i.e., it describes the system membership. The file contains as many lines as processes in the system. A process identity consists of a numerical process identifier, the IP address or name of the process and the port number on which the process is listening for incoming messages. The entries of each process identity are separated by white space character. The following is an example of the contents of a `HOSTS` file for a system of 5 processes:
   ```
 2 localhost 11002
