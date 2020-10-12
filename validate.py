@@ -35,7 +35,7 @@ class TC:
         self.sudoPassword = sudoPassword
 
         cmd1 = 'tc qdisc add dev {} root netem 2>/dev/null'.format(self.interface)
-        cmd2 = 'tc qdisc change dev {} root netem delay {} {} loss {} {} reorder {} {}'.format(self.interface, *self.losses['delay'], *self.losses['loss'], *self.losses['reordering'])
+        cmd2 = 'tc qdisc change dev {} root netem delay {} {} distribution normal loss {} {} reorder {} {}'.format(self.interface, *self.losses['delay'], *self.losses['loss'], *self.losses['reordering'])
 
         if self.needSudo:
             os.system("echo {} | sudo -S {}".format(self.sudoPassword, cmd1))
@@ -49,6 +49,7 @@ class TC:
     def __str__(self):
         ret = """\
         Interface: {}
+          Distribution: Normal
           Delay: {} {}
           Loss: {} {}
           Reordering: {} {}""".format(
