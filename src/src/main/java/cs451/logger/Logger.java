@@ -1,4 +1,4 @@
-package cs451.logs;
+package cs451.logger;
 
 public class Logger {
 
