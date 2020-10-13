@@ -26,6 +26,6 @@ public interface Link {
     void removeListener(LinkListener listener);
 
     static Link getLink(int port) {
-        return new PerfectLink(port);
+        return new PerfectLinkAggregate(port);
     }
 }

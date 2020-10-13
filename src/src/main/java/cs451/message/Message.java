@@ -23,6 +23,10 @@ public class Message implements Serializable {
         public int hashCode() {
             return (a * 7) + (b * 13);
         }
+        @Override
+        public String toString() {
+            return "(" + a + "," + b + ")";
+        }
     }
 
     public static final class IntTriple {
@@ -115,6 +119,12 @@ public class Message implements Serializable {
 
     public Message toAck() {
         return new Message(this, true);
+    }
+
+    @Override
+    public boolean equals(Object that) {
+        return that instanceof Message
+            && this.getFullId().equals(((Message)that).getFullId());
     }
 
     @Override

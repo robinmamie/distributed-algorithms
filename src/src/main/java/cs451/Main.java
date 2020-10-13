@@ -70,7 +70,10 @@ public class Main {
         }
 
         Coordinator coordinator = new Coordinator(parser.myId(), parser.barrierIp(), parser.barrierPort(), parser.signalIp(), parser.signalPort());
-
+        final boolean fifo = true;
+        //final boolean lcausal = false;
+        Broadcast.prepare(fifo, parser, toOutput);
+    
         System.out.println("Waiting for all processes for finish initialization");
         coordinator.waitOnBarrier();
 
@@ -78,8 +81,6 @@ public class Main {
         
         // ---------------------------------------------------------------------
         // TODO L-Causal broadcast
-        final boolean fifo = true;
-        //final boolean lcausal = false;
         Broadcast.handle(fifo, parser, toOutput);
 
         // ---------------------------------------------------------------------

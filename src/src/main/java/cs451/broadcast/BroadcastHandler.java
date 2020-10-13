@@ -11,6 +11,18 @@ import cs451.parser.Parser;
 public class BroadcastHandler {
 
     private static final int TIMEOUT = 50;
+    private static Broadcast b;
+
+    static void create(boolean isFifo, Parser parser, List<String> toOutput) {
+        if (isFifo) {
+            int myPort = parser.hosts().get(parser.myId() - 1).getPort();
+            b = new FifoBroadcast(myPort, parser.hosts(), parser.myId(), m -> {
+                toOutput.add("d " + m.getOriginId() + " " + m.getMessageId());
+            });
+        } else {
+            // TODO create LCausalBroadcast
+        }
+    }
 
     static void start(boolean isFifo, Parser parser, List<String> toOutput) {
         if (isFifo) {
@@ -25,23 +37,12 @@ public class BroadcastHandler {
         final int N = nbMessages;
 
         new Thread(() -> {
-            int myPort = parser.hosts().get(parser.myId() - 1).getPort();
-            Broadcast b = new FifoBroadcast(myPort, parser.hosts(), parser.myId(), m -> {
-                toOutput.add("d " + m.getOriginId() + " " + m.getMessageId());
-            });
-
             // Broadcast
             for (int i = 1; i <= N; ++i) {
                 final Message m = new Message(parser.myId(), i);
                 b.broadcast(m);
                 toOutput.add("b " + m.getMessageId());
-                if (i % 100 == 0) {
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
+                // Continue when sendQueue is empty, after e.g. 100 messages?
             }
         }).start();
         try {

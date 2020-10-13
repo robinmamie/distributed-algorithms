@@ -11,7 +11,7 @@ import cs451.parser.Host;
 
 public class FifoBroadcast implements Broadcast {
 
-    private final UniformReliableBroadcast urb;
+    private final Broadcast urb;
     private final Map<Integer, Integer> delivered = new ConcurrentHashMap<>();
     private final Map<Integer, Set<Integer>> past = new ConcurrentHashMap<>();
 
@@ -20,7 +20,7 @@ public class FifoBroadcast implements Broadcast {
             delivered.put(i, 1);
             past.put(i, ConcurrentHashMap.newKeySet());
         }
-        urb = new UniformReliableBroadcast(port, hosts, myId, m -> {
+        urb = new URBAggregate(port, hosts, myId, m -> {//new UniformReliableBroadcast(port, hosts, myId, m -> {
             synchronized (past) {
                 int deliveredUntil = delivered.get(m.getOriginId());
                 past.get(m.getOriginId()).add(m.getMessageId());
