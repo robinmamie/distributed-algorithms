@@ -4,13 +4,13 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import cs451.message.Message;
 import cs451.parser.Parser;
 
 public class BroadcastHandler {
+
+    private static final int TIMEOUT = 50;
 
     static void start(boolean isFifo, Parser parser, List<String> toOutput) {
         if (isFifo) {
@@ -24,17 +24,10 @@ public class BroadcastHandler {
         int nbMessages = readConfig(parser.config());
         final int N = nbMessages;
 
-        BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
         new Thread(() -> {
             int myPort = parser.hosts().get(parser.myId() - 1).getPort();
             Broadcast b = new FifoBroadcast(myPort, parser.hosts(), parser.myId(), m -> {
                 toOutput.add("d " + m.getOriginId() + " " + m.getMessageId());
-                try {
-                    queue.put(true);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
             });
 
             // Broadcast
@@ -42,12 +35,26 @@ public class BroadcastHandler {
                 final Message m = new Message(parser.myId(), i);
                 b.broadcast(m);
                 toOutput.add("b " + m.getMessageId());
+                if (i % 100 == 0) {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
             }
         }).start();
         try {
-            while (nbMessages > 0) {
-                queue.take();
-                nbMessages -= 1;
+            int timeout = TIMEOUT;
+            int memory = 0;
+            while (timeout > 0 && toOutput.size() < nbMessages * (parser.hosts().size() + 1)) {
+                Thread.sleep(100);
+                if (memory == toOutput.size()) {
+                    timeout -= 1;
+                } else {
+                    memory = toOutput.size();
+                    timeout = TIMEOUT;
+                }
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
