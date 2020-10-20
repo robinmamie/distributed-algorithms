@@ -17,7 +17,7 @@ public class Message {
         }
         @Override
         public int hashCode() {
-            return (a * 7) + (b * 13);
+            return (a * 31) + (b * 17);
         }
         @Override
         public String toString() {
@@ -43,7 +43,7 @@ public class Message {
         }
         @Override
         public int hashCode() {
-            return (a * 7) + (b * 13) + (c * 2);
+            return (a * 31) + (b * 17) + (c * 13);
         }
     }
 
@@ -52,36 +52,31 @@ public class Message {
     private final int messageId;
     private final int lastHop;
     private final boolean ack;
+    private final long seqNumber;
 
-    private Message(int originId, int messageId, int lastHop, boolean ack) {
+    private Message(int originId, int messageId, int lastHop, long seqNumber, boolean ack) {
         this.originId = originId;
         this.messageId = messageId;
         this.lastHop = lastHop;
         this.ack = ack;
+        this.seqNumber = seqNumber;
     }
 
-    public Message(int originId, int messageId) {
-        this(originId, messageId, originId, false);
+    public static Message createMessage(int originId, int messageId) {
+        return new Message(originId, messageId, originId, -1, false);
     }
 
-    public Message(int originId, int messageId, boolean ack) {
-        this(originId, messageId, originId, ack);
+    public Message toAck(int myId) {
+        return new Message(originId, messageId, myId, seqNumber, true);
     }
 
-    private Message(Message that, boolean ack) {
-        this.originId = that.originId;
-        this.messageId = that.messageId;
-        this.lastHop = that.lastHop;
-        this.ack = true;
+    public Message changeLastHop(int myId) {
+        return new Message(originId, messageId, myId, seqNumber, ack);
     }
 
-    public Message(Message that, int lastHop) {
-        this.originId = that.originId;
-        this.messageId = that.messageId;
-        this.lastHop = lastHop;
-        this.ack = false;
+    public Message changeSeqNumber(long seqNumber) {
+        return new Message(originId, messageId, lastHop, seqNumber, ack);
     }
-
 
     public int getOriginId() {
         return originId;
@@ -94,42 +89,38 @@ public class Message {
     public int getLastHop() {
         return lastHop;
     }
-
-    public IntPair getId() {
-        return new IntPair(getOriginId(), getMessageId());
-    }
-
-    public IntTriple getFullId() {
-        return new IntTriple(getOriginId(), getMessageId(), getLastHop());
+    
+    public long getSeqNumber() {
+        return seqNumber;
     }
 
     public boolean isAck() {
         return ack;
     }
 
-    public boolean isAck(Message that) {
+    public IntPair getId() {
+        return new IntPair(originId, messageId);
+    }
+
+    public IntTriple getFullId() {
+        return new IntTriple(originId, messageId, lastHop);
+    }
+
+    public boolean isCorrectAck(Message that) {
         return ack
             && this.getOriginId() == that.getOriginId()
             && this.getMessageId() == that.getMessageId();
-    }
-
-    public Message toAck() {
-        return new Message(this, true);
-    }
+    }   
 
     @Override
     public boolean equals(Object that) {
         return that instanceof Message
-            && this.getFullId().equals(((Message)that).getFullId());
+            && this.getId().equals(((Message)that).getId());
     }
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int hash = 1;
-        hash = prime * hash + originId;
-        hash = prime * hash + messageId;
-        return hash;
+        return messageId * 17 + originId * 31;
     }
 
     @Override
@@ -137,46 +128,22 @@ public class Message {
         return (ack ? "Ack" : "Message") + " #" + messageId + " from " + originId + ", last hop " + lastHop;
     }
 
-    private static final byte fullMask = (byte) 0xff;
-
-    private void intToByte(int integer, byte[] array, int offset) {
-        array[offset+0] = (byte)((integer >> 24) & fullMask);
-        array[offset+1] = (byte)((integer >> 16) & fullMask);
-        array[offset+2] = (byte)((integer >> 8) & fullMask);
-        array[offset+3] = (byte)((integer) & fullMask);
-    }
-
     public byte[] serialize() {
-        final int parameterSize = Integer.BYTES;
-        byte[] datagram = new byte[parameterSize*3 + 1];
-        intToByte(getOriginId(), datagram, 0);
-        intToByte(getMessageId(), datagram, parameterSize);
-        intToByte(getLastHop(), datagram, parameterSize*2);
-        datagram[parameterSize*3] = isAck() ? fullMask : 0;
+        byte[] datagram = new byte[21];
+        ByteOp.intToByte(originId, datagram, 0);
+        ByteOp.intToByte(messageId, datagram, 4);
+        ByteOp.intToByte(lastHop, datagram, 8);
+        ByteOp.longToByte(seqNumber, datagram, 12);
+        datagram[20] = ack ? (byte) 0xFF : 0;
         return datagram;
     }
 
-    private static int byteToInt(byte[] array, int offset) {
-        int ret = 0;
-        for (int i=offset; i<Integer.BYTES+offset; i++) {
-            ret <<= 8;
-            ret |= (int)array[i] & 0xFF;
-        }
-        return ret;
-        /*int integer = 0;
-        integer += array[offset+0] << 24;
-        integer += array[offset+1] << 16;
-        integer += array[offset+2] << 8;
-        integer += array[offset+3];
-        return integer;*/
-    }
-
     public static Message deserialize(byte[] datagram) {
-        final int parameterSize = Integer.BYTES;
-        int originId = byteToInt(datagram, 0);
-        int messageId = byteToInt(datagram, parameterSize);
-        int lastHop = byteToInt(datagram, parameterSize*2);
-        boolean ack = datagram[parameterSize*3] != 0;
-        return new Message(originId, messageId, lastHop, ack);
+        int originId = ByteOp.byteToInt(datagram, 0);
+        int messageId = ByteOp.byteToInt(datagram, 4);
+        int lastHop = ByteOp.byteToInt(datagram, 8);
+        long seqNumber = ByteOp.byteToLong(datagram, 12);
+        boolean ack = datagram[20] != 0;
+        return new Message(originId, messageId, lastHop, seqNumber, ack);
     }
 }

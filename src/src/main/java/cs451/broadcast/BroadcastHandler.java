@@ -39,10 +39,9 @@ public class BroadcastHandler {
         new Thread(() -> {
             // Broadcast
             for (int i = 1; i <= N; ++i) {
-                final Message m = new Message(parser.myId(), i);
+                final Message m = Message.createMessage(parser.myId(), i);
                 b.broadcast(m);
                 toOutput.add("b " + m.getMessageId());
-                // Continue when sendQueue is empty, after e.g. 100 messages?
             }
         }).start();
         try {

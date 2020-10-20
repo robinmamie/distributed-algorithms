@@ -25,7 +25,7 @@ public interface Link {
 
     void removeListener(LinkListener listener);
 
-    static Link getLink(int port) {
-        return new PerfectLinkAggregate(port);
+    static Link getLink(int port, int numHosts, int myId) {
+        return new SeqLink(port, numHosts, myId);
     }
 }

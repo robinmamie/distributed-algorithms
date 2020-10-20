@@ -25,8 +25,8 @@ public class FifoBroadcast implements Broadcast {
                 int deliveredUntil = delivered.get(m.getOriginId());
                 past.get(m.getOriginId()).add(m.getMessageId());
                 while (past.get(m.getOriginId()).contains(deliveredUntil)) {
-                    // TODO this is "cheating", store messages (?)
-                    deliver.apply(new Message(m.getOriginId(), deliveredUntil));
+                    // Retrieve correct message data
+                    deliver.apply(Message.createMessage(m.getOriginId(), deliveredUntil));
                     deliveredUntil += 1;
                     delivered.put(m.getOriginId(), deliveredUntil);
                 }

@@ -25,7 +25,7 @@ public class URBAggregate implements Broadcast {
     private final BListener urbDeliver;
 
     public URBAggregate(int port, List<Host> hosts, int myId, BListener deliver) {
-        this.link = Link.getLink(port);
+        this.link = Link.getLink(port, hosts.size(), myId);
         this.threshold = hosts.size() / 2;
         this.myId = myId;
         this.hosts = hosts;
@@ -54,13 +54,15 @@ public class URBAggregate implements Broadcast {
         Message.IntPair id = m.getId();
         acks.put(id, ConcurrentHashMap.newKeySet());
         acks.get(id).add(myId);
-        pending.add(id);
+        if (!pending.add(id)) {
+            return;
+        }
 
-        m = new Message(m, myId);
+        m = m.changeLastHop(myId);
         for (Host host: hosts) {
             if (host.getId() == myId) {
                 deliver(m, null, 0);
-            } else {
+            } else if (!acks.get(id).contains(host.getId())) {
                 try {
                     link.send(m, InetAddress.getByName(host.getIp()), host.getPort());
                 } catch (UnknownHostException e) {
