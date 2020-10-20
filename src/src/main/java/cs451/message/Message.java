@@ -1,10 +1,6 @@
 package cs451.message;
 
-import java.io.Serializable;
-
-public class Message implements Serializable {
-
-    private static final long serialVersionUID = 2865064940223588810L;
+public class Message {
 
     public static final class IntPair {
         private final int a;

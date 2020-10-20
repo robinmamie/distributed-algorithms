@@ -11,7 +11,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import cs451.message.Message;
 
-public class PerfectLinkAggregate extends AbstractLink {
+class PerfectLinkAggregate extends AbstractLink {
 
     public static final long TIMEOUT_MS = 100;
 
