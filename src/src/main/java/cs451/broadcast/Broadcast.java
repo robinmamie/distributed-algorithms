@@ -7,6 +7,7 @@ import cs451.parser.Parser;
 
 public interface Broadcast {
     void broadcast(Message m);
+    int status();
 
     static void prepare(boolean isFifo, Parser parser, List<String> toOutput) {
         BroadcastHandler.create(isFifo, parser, toOutput);

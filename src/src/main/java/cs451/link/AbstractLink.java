@@ -12,7 +12,7 @@ abstract class AbstractLink implements Link {
     //private final Logger logger = new Logger(this);
 
     @Override
-    abstract public void send(Message message, InetAddress address, int port);
+    abstract public void send(Message message, int hostId, InetAddress address, int port);
 
     @Override
     public void addListener(LinkListener listener) {

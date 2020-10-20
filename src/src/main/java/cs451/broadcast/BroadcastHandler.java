@@ -36,23 +36,21 @@ public class BroadcastHandler {
         int nbMessages = readConfig(parser.config());
         final int N = nbMessages;
 
-        new Thread(() -> {
-            // Broadcast
-            for (int i = 1; i <= N; ++i) {
-                final Message m = Message.createMessage(parser.myId(), i);
-                b.broadcast(m);
-                toOutput.add("b " + m.getMessageId());
-            }
-        }).start();
+        // Broadcast
+        for (int i = 1; i <= N; ++i) {
+            final Message m = Message.createMessage(parser.myId(), i);
+            b.broadcast(m);
+            toOutput.add("b " + m.getMessageId());
+        }
         try {
             int timeout = TIMEOUT;
             int memory = 0;
             while (timeout > 0 && toOutput.size() < nbMessages * (parser.hosts().size() + 1)) {
                 Thread.sleep(100);
-                if (memory == toOutput.size()) {
+                if (memory == b.status()) {
                     timeout -= 1;
                 } else {
-                    memory = toOutput.size();
+                    memory = b.status();
                     timeout = TIMEOUT;
                 }
             }

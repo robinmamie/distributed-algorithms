@@ -19,7 +19,7 @@ public interface Link {
      * @param address The address of the recipient.
      * @param port The port number of the recipient.
      */
-    void send(Message message, InetAddress address, int port);
+    void send(Message message, int hostId, InetAddress address, int port);
 
     void addListener(LinkListener listener);
 

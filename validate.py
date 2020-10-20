@@ -340,8 +340,8 @@ def startProcesses(processes, runscript, hostsFilePath, configFilePath, outputDi
 
 def main(processes, messages, runscript, broadcastType, logsDir, testConfig):
     # Set tc for loopback
-    tc = TC(testConfig['TC'])
-    print(tc)
+    #tc = TC(testConfig['TC'])
+    #print(tc)
 
     # Start the barrier
     initBarrier = barrier.Barrier(BARRIER_IP, BARRIER_PORT, processes)
@@ -382,12 +382,12 @@ def main(processes, messages, runscript, broadcastType, logsDir, testConfig):
         print("All processes have been initialized.")
 
         # TODO FIXME
-        st.run()
-        print("StressTest is complete.")
+        #st.run()
+        #print("StressTest is complete.")
 
 
-        print("Resuming stopped processes.")
-        st.continueStoppedProcesses()
+        #print("Resuming stopped processes.")
+        #st.continueStoppedProcesses()
 
         print("Waiting until all running processes have finished broadcasting.")
         finishSignalThread.join()

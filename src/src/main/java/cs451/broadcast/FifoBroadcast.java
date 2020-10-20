@@ -20,7 +20,7 @@ public class FifoBroadcast implements Broadcast {
             delivered.put(i, 1);
             past.put(i, ConcurrentHashMap.newKeySet());
         }
-        urb = new URBAggregate(port, hosts, myId, m -> {//new UniformReliableBroadcast(port, hosts, myId, m -> {
+        urb = new URBAggregate(port, hosts, myId, m -> {
             synchronized (past) {
                 int deliveredUntil = delivered.get(m.getOriginId());
                 past.get(m.getOriginId()).add(m.getMessageId());
@@ -28,8 +28,8 @@ public class FifoBroadcast implements Broadcast {
                     // Retrieve correct message data
                     deliver.apply(Message.createMessage(m.getOriginId(), deliveredUntil));
                     deliveredUntil += 1;
-                    delivered.put(m.getOriginId(), deliveredUntil);
                 }
+                delivered.put(m.getOriginId(), deliveredUntil);
                 final int newMax = deliveredUntil;
                 past.get(m.getOriginId()).removeIf(x -> x < newMax);
             }
@@ -39,6 +39,10 @@ public class FifoBroadcast implements Broadcast {
     @Override
     public void broadcast(Message m) {
         urb.broadcast(m);
+    }
+
+    public int status() {
+        return urb.status();
     }
     
 }

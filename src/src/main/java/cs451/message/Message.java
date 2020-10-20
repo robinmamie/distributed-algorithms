@@ -45,6 +45,10 @@ public class Message {
         public int hashCode() {
             return (a * 31) + (b * 17) + (c * 13);
         }
+        @Override
+        public String toString() {
+            return "(" + a + "," + b + "," + c + ")";
+        }
     }
 
     // note: ID is maximum 1 byte!
@@ -125,7 +129,7 @@ public class Message {
 
     @Override
     public String toString() {
-        return (ack ? "Ack" : "Message") + " #" + messageId + " from " + originId + ", last hop " + lastHop;
+        return (ack ? "Ack" : "Message") + " #" + messageId + " from " + originId + " | last hop " + lastHop + ", seq " + seqNumber;
     }
 
     public byte[] serialize() {
