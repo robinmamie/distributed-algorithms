@@ -1,7 +1,15 @@
 package cs451.message;
 
 class ByteOp {
-    
+
+    public static void byteIntToByte(int integer, byte[] array, int offset) {
+        array[offset] = (byte)((integer));
+    }
+
+    public static int byteToByteInt(byte[] array, int offset) {
+        return (int)array[offset] & 0xFF;
+    }
+
     public static void intToByte(int integer, byte[] array, int offset) {
         int shift = Integer.BYTES << 3;
         for (int i = offset; i < offset+Integer.BYTES; ++i) {

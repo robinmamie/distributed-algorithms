@@ -16,7 +16,7 @@ public class BroadcastHandler {
     static void create(boolean isFifo, Parser parser, List<String> toOutput) {
         if (isFifo) {
             int myPort = parser.hosts().get(parser.myId() - 1).getPort();
-            b = new FifoBroadcast(myPort, parser.hosts(), parser.myId(), m -> {
+            b = new UrbFifo(myPort, parser.hosts(), parser.myId(), m -> {
                 toOutput.add("d " + m.getOriginId() + " " + m.getMessageId());
             });
         } else {

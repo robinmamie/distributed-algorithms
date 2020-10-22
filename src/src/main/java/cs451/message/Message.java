@@ -133,21 +133,21 @@ public class Message {
     }
 
     public byte[] serialize() {
-        byte[] datagram = new byte[21];
-        ByteOp.intToByte(originId, datagram, 0);
-        ByteOp.intToByte(messageId, datagram, 4);
-        ByteOp.intToByte(lastHop, datagram, 8);
-        ByteOp.longToByte(seqNumber, datagram, 12);
-        datagram[20] = ack ? (byte) 0xFF : 0;
+        byte[] datagram = new byte[15];
+        ByteOp.byteIntToByte(originId, datagram, 0);
+        ByteOp.intToByte(messageId, datagram, 1);
+        ByteOp.byteIntToByte(lastHop, datagram, 5);
+        ByteOp.longToByte(seqNumber, datagram, 6);
+        datagram[14] = ack ? (byte) 0xFF : 0;
         return datagram;
     }
 
     public static Message deserialize(byte[] datagram) {
-        int originId = ByteOp.byteToInt(datagram, 0);
-        int messageId = ByteOp.byteToInt(datagram, 4);
-        int lastHop = ByteOp.byteToInt(datagram, 8);
-        long seqNumber = ByteOp.byteToLong(datagram, 12);
-        boolean ack = datagram[20] != 0;
+        int originId = ByteOp.byteToByteInt(datagram, 0);
+        int messageId = ByteOp.byteToInt(datagram, 1);
+        int lastHop = ByteOp.byteToByteInt(datagram, 5);
+        long seqNumber = ByteOp.byteToLong(datagram, 6);
+        boolean ack = datagram[14] != 0;
         return new Message(originId, messageId, lastHop, seqNumber, ack);
     }
 }

@@ -1,21 +1,20 @@
 package cs451.link;
 
 import java.net.InetAddress;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import cs451.message.Message;
+import cs451.vectorclock.VectorClock;
 
 class HostInfo {
-    public static final long TIMEOUT_MS = 200;
+    public static final long TIMEOUT_MS = 500;
 
-    // TODO find the usefulness of the vector clocks, not yet clear at this level
-    private final AtomicLong receivedVectorClock = new AtomicLong(0L);
-    private final AtomicLong sentVectorClock = new AtomicLong(0L);
-    private final Set<Long> pendingVectorClock = ConcurrentHashMap.newKeySet();
+    private final VectorClock vcAtDistantHost = new VectorClock();
+    private final VectorClock vcOfMessagesFromDistantHost = new VectorClock();
+
+    private final AtomicLong sentCounter = new AtomicLong(0L);
     private final BlockingQueue<WaitingPacket> stubbornQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<Message> waitingQueue = new LinkedBlockingQueue<>();
     private final AtomicLong currentTimeout = new AtomicLong(TIMEOUT_MS);
@@ -37,15 +36,14 @@ class HostInfo {
     }
 
     public long getNextSeqNumber() {
-        return sentVectorClock.incrementAndGet();
+        return sentCounter.incrementAndGet();
     }
 
     public boolean canSendMessage() {
-        return stubbornQueue.size() < SeqLink.WINDOW_SIZE;
+        return vcAtDistantHost.getStateOfVc() + SeqLink.WINDOW_SIZE > sentCounter.get();
     }
 
     public WaitingPacket getNextStubborn() {
-        // TODO synchronize on poll?
         return stubbornQueue.poll();
     }
 
@@ -65,23 +63,20 @@ class HostInfo {
         return waitingQueue.poll();
     }
 
-    public boolean hasAckedPacket(WaitingPacket wp) {
-        return wp.getMessage().getSeqNumber() <= receivedVectorClock.get()
-            || pendingVectorClock.contains(wp.getMessage().getSeqNumber());
+    public boolean hasAckedPacket(long seqNumber) {
+        return vcAtDistantHost.isPast(seqNumber);
     }
 
     public void updateReceiveVectorClock(long messageSeqNumber) {
-        synchronized (pendingVectorClock) {
-            if (messageSeqNumber == receivedVectorClock.get() + 1) {
-                long got;
-                do {
-                    got = receivedVectorClock.incrementAndGet();
-                    pendingVectorClock.remove(got);
-                } while (pendingVectorClock.contains(got));
-            } else {
-                pendingVectorClock.add(messageSeqNumber);
-            }
-        }
+        vcAtDistantHost.addMember(messageSeqNumber);
+    }
+
+    public boolean hasReceivedMessage(long seqNumber) {
+        return vcOfMessagesFromDistantHost.isPast(seqNumber);
+    }
+
+    public void updateLocalReceiveVectorClock(long messageSeqNumber) {
+        vcOfMessagesFromDistantHost.addMember(messageSeqNumber);
     }
 
     public long getTimeout() {
@@ -94,10 +89,5 @@ class HostInfo {
 
     public void testAndDouble(long messageTimeout) {
         currentTimeout.compareAndSet(messageTimeout, messageTimeout*2);
-    }
-
-    @Override
-    public String toString() {
-        return "Number of waiting messages: " + waitingQueue.size();
     }
 }
