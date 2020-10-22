@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import cs451.link.Link;
 import cs451.listener.BListener;
-import cs451.logger.Logger;
 import cs451.message.Message;
 import cs451.parser.Host;
 
@@ -25,15 +24,12 @@ public class URBAggregate implements Broadcast {
     private final int myId;
     private final BListener urbDeliver;
 
-    private final Logger logger = new Logger(this);
-
     public URBAggregate(int port, List<Host> hosts, int myId, BListener deliver) {
-        this.link = Link.getLink(port, hosts.size(), myId);
+        this.link = Link.getLink(port, hosts, myId);
         this.threshold = hosts.size() / 2;
         this.myId = myId;
         this.hosts = hosts;
         this.link.addListener((m, a, p) -> deliver(m, a, p));
-        logger.log("init");
         this.urbDeliver = deliver;
     }
 
@@ -44,11 +40,11 @@ public class URBAggregate implements Broadcast {
                 broadcast(m);
             }
             acks.get(id).add(m.getLastHop());
-            logger.log(m.getId() + ": " + acks.get(id).size());
             if (acks.get(id).size() > threshold) {
                 delivered.add(id);
                 pending.remove(id);
                 //acks.remove(id);
+                // TODO stderr time here, to graph the progression (delete loggers and other stderr)
                 urbDeliver.apply(m);
             }
         }

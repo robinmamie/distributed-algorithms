@@ -1,9 +1,11 @@
 package cs451.link;
 
 import java.net.InetAddress;
+import java.util.List;
 
 import cs451.listener.LinkListener;
 import cs451.message.Message;
+import cs451.parser.Host;
 
 public interface Link {
 
@@ -25,7 +27,7 @@ public interface Link {
 
     void removeListener(LinkListener listener);
 
-    static Link getLink(int port, int numHosts, int myId) {
-        return new SeqLink(port, numHosts, myId);
+    static Link getLink(int port, List<Host> hosts, int myId) {
+        return new SeqLink(port, hosts, myId);
     }
 }

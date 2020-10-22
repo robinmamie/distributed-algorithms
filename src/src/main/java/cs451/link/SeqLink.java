@@ -4,62 +4,60 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
+import cs451.logger.Logger;
 import cs451.message.Message;
+import cs451.parser.Host;
 
 public class SeqLink extends AbstractLink {
 
-    public static final long TIMEOUT_MS = 200;
-    private static final int WINDOW_SIZE = 100;
+    public static final int WINDOW_SIZE = 100;
 
     private final DatagramSocket socket;
     private final int myId;
-    private final int numHosts;
 
     private final Set<Message.IntTriple> delivered = ConcurrentHashMap.newKeySet();
-
-    private final Map<Integer, AtomicLong> sentVectorClock = new ConcurrentHashMap<>();
-    private final Map<Integer, AtomicLong> gotVectorClock = new ConcurrentHashMap<>();
-    private final Map<Integer, Set<Long>> pendingSeq = new ConcurrentHashMap<>();
-
-    private final Map<Integer, BlockingDeque<CustomPacket>> sendQueues = new ConcurrentHashMap<>();
-    private final Map<Integer, BlockingQueue<DatagramPacket>> waitingQueues = new ConcurrentHashMap<>();
 
     private final BlockingQueue<DatagramPacket> sendQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<DatagramPacket> receiveQueue = new LinkedBlockingQueue<>();
 
+    private final Map<Integer, HostInfo> hostInfo = new HashMap<>();
+
     // private final Map<Integer, Long> messageClock = new ConcurrentHashMap<>();
 
-    public SeqLink(int port, int numHosts, int myId) {
+    public SeqLink(int port, List<Host> hosts, int myId) {
         try {
             socket = new DatagramSocket(port);
         } catch (SocketException e) {
             throw new RuntimeException(e);
         }
 
-        for (int i = 1; i <= numHosts; ++i) {
-            sentVectorClock.put(i, new AtomicLong(0));
-            gotVectorClock.put(i, new AtomicLong(0));
-            pendingSeq.put(i, ConcurrentHashMap.newKeySet());
-            sendQueues.put(i, new LinkedBlockingDeque<>());
-            waitingQueues.put(i, new LinkedBlockingQueue<>());
+        for (Host host : hosts) {
+            int i = host.getId();
+            if (i != myId) {
+                try {
+                    hostInfo.put(i, new HostInfo(InetAddress.getByName(host.getIp()), host.getPort()));
+                } catch (UnknownHostException e) {
+                    throw new RuntimeException("Invalid IP address given!");
+                }
+            }
         }
 
         this.myId = myId;
-        this.numHosts = numHosts;
 
         new Thread(() -> listen(port)).start();
         new Thread(() -> sendPackets()).start();
         new Thread(() -> stubbornSend()).start();
-        for (int i = 0; i < 3; ++i) {
+        for (int i = 0; i < 1; ++i) {
+            // FIXME concurrency not good!!
             new Thread(() -> handleListenersLowLevel()).start();
         }
     }
@@ -67,22 +65,22 @@ public class SeqLink extends AbstractLink {
     @Override
     public void send(Message message, int hostId, InetAddress address, int port) {
         try {
-            // EXPERIMENTAL - message already received from them, so they either got an ACK or we already sent them! No need to resend.
+            // EXPERIMENTAL - message already received from them, so they either got an ACK
+            // or we already sent them! No need to resend.
             if (delivered.contains(new Message.IntTriple(message.getOriginId(), message.getMessageId(), hostId))) {
                 return;
             }
-            CustomPacket cp = new CustomPacket(message, address, port);
-            synchronized (sentVectorClock.get(hostId)) {
-                byte[] buf = message.serialize();
-                DatagramPacket packet = new DatagramPacket(buf, buf.length, address, port);
-                if (sentVectorClock.get(hostId).get() < gotVectorClock.get(hostId).get() + WINDOW_SIZE) {
-                    cp.message = cp.message.changeSeqNumber(sentVectorClock.get(hostId).incrementAndGet());
-                    buf = cp.message.serialize();
-                    packet = new DatagramPacket(buf, buf.length, address, port);
-                    sendQueue.put(packet);
-                    sendQueues.get(hostId).put(cp);
+
+            // Set sequence number to message
+            HostInfo host = hostInfo.get(hostId);
+            long seqNumber = host.getNextSeqNumber();
+            Message seqMessage = message.changeSeqNumber(seqNumber);
+
+            synchronized (host) {
+                if (host.canSendMessage()) {
+                    sendNewMessage(seqMessage, host);
                 } else {
-                    waitingQueues.get(hostId).put(packet);
+                    host.addMessageInWaitingList(seqMessage);
                 }
             }
         } catch (InterruptedException e) {
@@ -90,58 +88,76 @@ public class SeqLink extends AbstractLink {
         }
     }
 
-    private void stubbornSend() {
-        for (int hostId = 1;; ++hostId) {
+    // -- MESSAGE OUT --
 
-            if (hostId > numHosts) {
-                hostId = 1;
-            }
+    private void sendNewMessage(Message message, HostInfo host) throws InterruptedException {
+        WaitingPacket wp = new WaitingPacket(message, host);
+        sendMessage(wp, host);
+        host.addPacketToConfirm(wp);
+    }
 
-            BlockingDeque<CustomPacket> mySendQueue = sendQueues.get(hostId);
+    private void sendMessage(WaitingPacket wp, HostInfo host) throws InterruptedException {
+        sendMessage(wp.getMessage(), host.getAddress(), host.getPort());
+    }
 
-            CustomPacket cp;
-            cp = mySendQueue.poll();
+    private void sendMessage(Message message, HostInfo host) throws InterruptedException {
+        sendMessage(message, host.getAddress(), host.getPort());
+    }
 
-            if (cp != null
-                    && cp.message.getSeqNumber() > gotVectorClock.get(hostId).get()
-                    && !pendingSeq.get(hostId).contains(cp.message.getSeqNumber())) {
-                try {
-                    if (cp.shouldResend()) { // receiveQueue.size() < WINDOW_SIZE && 
-                        byte[] buf = cp.message.serialize();
-                        sendQueue.put(new DatagramPacket(buf, buf.length, cp.address, cp.port));
-                    }
-                    mySendQueue.put(cp);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
-            }
-        }
+    private void sendMessage(Message message, InetAddress address, int port) throws InterruptedException {
+        byte[] buf = message.serialize();
+        sendQueue.put(new DatagramPacket(buf, buf.length, address, port));
     }
 
     public void sendPackets() {
+        Logger logger = new Logger(this, false);
         try {
             while (true) {
                 DatagramPacket packet = sendQueue.take();
                 socket.send(packet);
+                logger.log("SEND");
             }
         } catch (Exception e) {
             throw new RuntimeException("Cannot send packets!");
         }
     }
 
-    private void listen(int port) {
-        try {
-            while (true) {
-                byte[] buf = new byte[UDP_SAFE_PACKET_MAX_SIZE];
-                DatagramPacket packet = new DatagramPacket(buf, buf.length);
-                socket.receive(packet);
-                receiveQueue.put(packet);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Cannot receive packets!");
+    // -- MESSAGE OUT, BIS REPETITA --
+
+    private void emptyWaitingQueue(HostInfo host) throws InterruptedException {
+        while (host.canSendWaitingMessages()) {
+            Message m = host.getNextWaitingMessage();
+            sendNewMessage(m, host);
         }
     }
+
+    private void stubbornSend() {
+        while (true) {
+            hostInfo.forEach((hostId, host) -> {
+                final WaitingPacket wp = host.getNextStubborn();
+                try {
+                    if (wp == null) {
+                        emptyWaitingQueue(host);
+                    } else if (!host.hasAckedPacket(wp)) { // && receiveQueue.size() < WINDOW_SIZE
+                        WaitingPacket newWp = wp.resendIfTimedOut(() -> {
+                            try {
+                                sendMessage(wp, host);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                return;
+                            }
+                        });
+                        host.addPacketToConfirm(newWp);
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            });
+        }
+    }
+
+    // -- MESSAGE IN, TREATING --
 
     private void handleListenersLowLevel() {
         while (true) {
@@ -155,51 +171,22 @@ public class SeqLink extends AbstractLink {
             byte[] datagram = packet.getData();
             Message m = Message.deserialize(datagram);
 
-            // Stubborn link part
             int hostId = m.getLastHop();
-            if (m.isAck()) {
-                AtomicLong gotRegister = gotVectorClock.get(hostId);
-                if (m.getSeqNumber() == gotRegister.get() + 1) {
-                    long got = gotRegister.incrementAndGet();
-                    Set<Long> pending = pendingSeq.get(hostId);
-                    while (pending.contains(got)) {
-                        got = gotRegister.incrementAndGet();
-                        pending.remove(got);
-                    }
-                } else {
-                    pendingSeq.get(hostId).add(m.getSeqNumber());
-                }
+            HostInfo host = hostInfo.get(hostId);
 
-                // Send messages until WINDOW_SIZE
-                BlockingQueue<DatagramPacket> wq = waitingQueues.get(hostId);
-                synchronized (sentVectorClock.get(hostId)) {
-                    while (wq.size() > 0
-                            && sendQueues.get(hostId).size() < WINDOW_SIZE) {
-                        DatagramPacket newPacket = wq.poll();
-                        Message newM = Message.deserialize(newPacket.getData());
-                        CustomPacket cp = new CustomPacket(newM, newPacket.getAddress(), newPacket.getPort());
-                        cp.message = cp.message.changeSeqNumber(sentVectorClock.get(hostId).incrementAndGet());
-                        byte[] buf = cp.message.serialize();
-                        newPacket = new DatagramPacket(buf, buf.length, newPacket.getAddress(),
-                                newPacket.getPort());
-                        try {
-                            sendQueue.put(newPacket);
-                            sendQueues.get(hostId).put(cp);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            return;
-                        }
-                    }
+            try {
+                if (m.isAck()) {
+                    host.resetTimeout();
+                    host.updateReceiveVectorClock(m.getSeqNumber());
+                    emptyWaitingQueue(host);
+                } else {
+                    sendMessage(m.toAck(myId), host);
                 }
-            } else {
-                byte[] buf = m.toAck(myId).serialize();
-                try {
-                    sendQueue.put(new DatagramPacket(buf, buf.length, packet.getAddress(), packet.getPort()));
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
             }
+
             Message.IntTriple id = m.getFullId();
             if (!delivered.contains(id)) {
                 delivered.add(id);
@@ -208,41 +195,19 @@ public class SeqLink extends AbstractLink {
         }
     }
 
-    private class CustomPacket {
-        public Message message;
-        public InetAddress address;
-        public int port;
-        public long timestamp;
-        public long timeout;
+    // -- MESSAGE IN --
 
-        public CustomPacket(Message m, InetAddress a, int p) {
-            message = m;
-            address = a;
-            port = p;
-            timestamp = System.currentTimeMillis();
-            timeout = TIMEOUT_MS;
-        }
-
-        private void resetTimestamp() {
-            timestamp = System.currentTimeMillis();
-        }
-
-        public boolean shouldResend() {
-            if (System.currentTimeMillis() - timestamp < timeout) {
-                return false;
+    private void listen(int port) {
+        Logger logger = new Logger(this);
+        try {
+            while (true) {
+                byte[] buf = new byte[UDP_SAFE_PACKET_MAX_SIZE];
+                DatagramPacket packet = new DatagramPacket(buf, buf.length);
+                socket.receive(packet);
+                receiveQueue.put(packet);
             }
-            timeout *= 2;
-            resetTimestamp();
-            return true;
-        }
-
-        @Override
-        public boolean equals(Object that) {
-            return (that instanceof CustomPacket)
-                && this.message.getOriginId() == ((CustomPacket)that).message.getOriginId()
-                && this.message.getMessageId() == ((CustomPacket)that).message.getMessageId()
-                && this.address.toString().equals(((CustomPacket)that).address.toString())
-                && this.port == ((CustomPacket)that).port;
+        } catch (Exception e) {
+            throw new RuntimeException("Cannot receive packets!");
         }
     }
 }

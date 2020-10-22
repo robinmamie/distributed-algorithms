@@ -21,6 +21,7 @@ public class FifoBroadcast implements Broadcast {
             past.put(i, ConcurrentHashMap.newKeySet());
         }
         urb = new URBAggregate(port, hosts, myId, m -> {
+            // FIXME for some reason, some messages are not received! Some acks are ignored?!
             synchronized (past) {
                 int deliveredUntil = delivered.get(m.getOriginId());
                 past.get(m.getOriginId()).add(m.getMessageId());

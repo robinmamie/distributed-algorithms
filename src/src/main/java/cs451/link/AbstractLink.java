@@ -9,7 +9,6 @@ abstract class AbstractLink implements Link {
 
     //private final List<LinkListener> listeners = new CopyOnWriteArrayList<>();
     private LinkListener listener;
-    //private final Logger logger = new Logger(this);
 
     @Override
     abstract public void send(Message message, int hostId, InetAddress address, int port);
