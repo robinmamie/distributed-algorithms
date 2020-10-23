@@ -16,6 +16,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import cs451.message.Message;
 import cs451.parser.Host;
 
+// TODO put all abstractions in their own classes, as before!
+
 public class SeqLink extends AbstractLink {
 
     public static final int WINDOW_SIZE = 1 << 15;
