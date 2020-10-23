@@ -40,7 +40,7 @@ class HostInfo {
     }
 
     public boolean canSendMessage() {
-        return vcAtDistantHost.getStateOfVc() + SeqLink.WINDOW_SIZE > sentCounter.get();
+        return stubbornQueue.size() < SeqLink.WINDOW_SIZE;//vcAtDistantHost.getStateOfVc() + SeqLink.WINDOW_SIZE > sentCounter.get();
     }
 
     public WaitingPacket getNextStubborn() {

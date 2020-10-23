@@ -33,7 +33,7 @@ public class UrbFifo implements Broadcast {
         this.threshold = hosts.size() / 2;
         this.myId = myId;
         this.hosts = hosts;
-        this.link.addListener((m, a, p) -> deliver(m, a, p));
+        this.link.addListener(m -> deliver(m));
         this.deliver = deliver;
 
         for (Host host: hosts) {
@@ -41,8 +41,7 @@ public class UrbFifo implements Broadcast {
         }
     }
 
-    private void deliver(Message m, InetAddress a, int port) {
-        ++status;
+    private void deliver(Message m) {
         int origin = m.getOriginId();
         int mId = m.getMessageId();
         if (!delivered.get(origin).isPast(mId)) {
@@ -88,13 +87,5 @@ public class UrbFifo implements Broadcast {
                 }
             }
         }
-    }
-
-    private int status = 0;
-
-    @Override
-    public int status() {
-        return status;
-    }
-    
+    }  
 }

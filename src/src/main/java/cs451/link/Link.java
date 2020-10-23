@@ -3,7 +3,7 @@ package cs451.link;
 import java.net.InetAddress;
 import java.util.List;
 
-import cs451.listener.LinkListener;
+import cs451.listener.BListener;
 import cs451.message.Message;
 import cs451.parser.Host;
 
@@ -23,9 +23,9 @@ public interface Link {
      */
     void send(Message message, int hostId, InetAddress address, int port);
 
-    void addListener(LinkListener listener);
+    void addListener(BListener listener);
 
-    void removeListener(LinkListener listener);
+    void removeListener(BListener listener);
 
     static Link getLink(int port, List<Host> hosts, int myId) {
         return new SeqLink(port, hosts, myId);

@@ -3,8 +3,8 @@ package cs451;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import cs451.broadcast.Broadcast;
 import cs451.parser.Coordinator;
@@ -14,25 +14,21 @@ import cs451.parser.Parser;
 public class Main {
 
     private static String outputFile;
-    private static List<String> toOutput = new CopyOnWriteArrayList<>();
+    private static BlockingQueue<String> toOutput = new LinkedBlockingQueue<>();
 
     private static void handleSignal() {
-        //immediately stop network packet processing
+        // immediately stop network packet processing
         System.out.println("Immediately stopping network packet processing.");
 
-        //write/flush output file if necessary
-        System.out.println("Writing output.");
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
-            if (toOutput.isEmpty()) {
-                writer.newLine();
+        // write/flush output file if necessary
+        while (toOutput.size() > 0) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
-            for (String line: toOutput) {
-                writer.write(line);
-                writer.newLine();
-            }
-        } catch (IOException e) {
-            // Ignore
         }
+        System.out.println("Writing output.");
     }
 
     private static void initSignalHandlers() {
@@ -72,18 +68,30 @@ public class Main {
         Coordinator coordinator = new Coordinator(parser.myId(), parser.barrierIp(), parser.barrierPort(), parser.signalIp(), parser.signalPort());
         final boolean fifo = true;
         //final boolean lcausal = false;
+
+        new Thread(() -> { 
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+                while (true) {
+                    String out = toOutput.take();
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException("Cannot write to output file!");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
+
         Broadcast.prepare(fifo, parser, toOutput);
     
         System.out.println("Waiting for all processes for finish initialization");
         coordinator.waitOnBarrier();
 
         System.out.println("Broadcasting messages...");
-        
-        // ---------------------------------------------------------------------
-        // TODO L-Causal broadcast
-        Broadcast.handle(fifo, parser, toOutput);
 
-        // ---------------------------------------------------------------------
+        Broadcast.handle(fifo, parser, toOutput);
 
         System.out.println("Signaling end of broadcasting messages");
         coordinator.finishedBroadcasting();
