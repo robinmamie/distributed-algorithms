@@ -1,7 +1,5 @@
 package cs451.broadcast;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,11 +78,7 @@ public class UrbFifo implements Broadcast {
         m = m.changeLastHop(myId);
         for (Host host: hosts) {
             if (!ack.contains(host.getId())) {
-                try {
-                    link.send(m, host.getId(), InetAddress.getByName(host.getIp()), host.getPort());
-                } catch (UnknownHostException e) {
-                    e.printStackTrace();
-                }
+                link.send(m, host.getId());
             }
         }
     }  

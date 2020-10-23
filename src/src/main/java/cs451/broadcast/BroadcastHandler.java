@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import cs451.message.Message;
 import cs451.parser.Parser;
@@ -37,15 +38,27 @@ public class BroadcastHandler {
     }
 
     private static void startFifo(Parser parser, BlockingQueue<String> toOutput) {
-        int nbMessages = readConfig(parser.config());
-        final int N = nbMessages;
+        final int nbMessages = readConfig(parser.config());
+        final AtomicInteger messageCount = new AtomicInteger(nbMessages);
 
         // Broadcast
-        for (int i = 1; i <= N; ++i) {
-            final Message m = Message.createMessage(parser.myId(), i);
+        for (int i = 1; i <= nbMessages; ++i) {
+            final AtomicInteger count = new AtomicInteger(parser.hosts().size() - 1);
+            final Message m = Message.createMessage(parser.myId(), i, mes -> {
+                if (count.decrementAndGet() == 0) {
+                    try {
+                        toOutput.put("b " + mes.getMessageId());
+                        messageCount.decrementAndGet();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            });
             b.broadcast(m);
+        }
+        while (messageCount.get() != 0) {
             try {
-                toOutput.put("b " + m.getMessageId());
+                Thread.sleep(1);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return;

@@ -1,5 +1,7 @@
 package cs451.message;
 
+import cs451.listener.BListener;
+
 public class Message {
 
     public static final class IntPair {
@@ -57,29 +59,39 @@ public class Message {
     private final int lastHop;
     private final boolean ack;
     private final long seqNumber;
+    private final BListener listener;
 
-    private Message(int originId, int messageId, int lastHop, long seqNumber, boolean ack) {
+    private Message(int originId, int messageId, int lastHop, long seqNumber, boolean ack, BListener listener) {
         this.originId = originId;
         this.messageId = messageId;
         this.lastHop = lastHop;
         this.ack = ack;
         this.seqNumber = seqNumber;
+        this.listener = listener;
+    }
+
+    public static Message createMessage(int originId, int messageId, BListener listener) {
+        return new Message(originId, messageId, originId, -1, false, listener);
     }
 
     public static Message createMessage(int originId, int messageId) {
-        return new Message(originId, messageId, originId, -1, false);
+        return createMessage(originId, messageId, m -> {});
     }
 
     public Message toAck(int myId) {
-        return new Message(originId, messageId, myId, seqNumber, true);
+        return new Message(originId, messageId, myId, seqNumber, true, listener);
     }
 
     public Message changeLastHop(int myId) {
-        return new Message(originId, messageId, myId, seqNumber, ack);
+        return new Message(originId, messageId, myId, seqNumber, ack, listener);
     }
 
     public Message changeSeqNumber(long seqNumber) {
-        return new Message(originId, messageId, lastHop, seqNumber, ack);
+        return new Message(originId, messageId, lastHop, seqNumber, ack, listener);
+    }
+
+    public Message eraseListener() {
+        return new Message(originId, messageId, lastHop, seqNumber, ack, m -> {});
     }
 
     public int getOriginId() {
@@ -114,7 +126,11 @@ public class Message {
         return ack
             && this.getOriginId() == that.getOriginId()
             && this.getMessageId() == that.getMessageId();
-    }   
+    }
+
+    public void signalBroadcast() {
+        listener.apply(this);
+    }
 
     @Override
     public boolean equals(Object that) {
@@ -148,6 +164,6 @@ public class Message {
         int lastHop = ByteOp.byteToByteInt(datagram, 5);
         long seqNumber = ByteOp.byteToLong(datagram, 6);
         boolean ack = datagram[14] != 0;
-        return new Message(originId, messageId, lastHop, seqNumber, ack);
+        return new Message(originId, messageId, lastHop, seqNumber, ack, m -> {});
     }
 }

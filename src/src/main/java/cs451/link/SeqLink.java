@@ -18,7 +18,7 @@ import cs451.parser.Host;
 
 public class SeqLink extends AbstractLink {
 
-    public static final int WINDOW_SIZE = 1 << 10;
+    public static final int WINDOW_SIZE = 1 << 15;
 
     private final DatagramSocket socket;
     private final int myId;
@@ -47,7 +47,6 @@ public class SeqLink extends AbstractLink {
         }
 
         this.myId = myId;
-
         ExecutorService executor = Executors.newFixedThreadPool(4);
         executor.execute(() -> listen());
         executor.execute(() -> sendPackets());
@@ -56,20 +55,12 @@ public class SeqLink extends AbstractLink {
     }
 
     @Override
-    public void send(Message message, int hostId, InetAddress address, int port) {
+    public void send(Message message, int hostId) {
         try {
             // Set sequence number to message
             HostInfo host = hostInfo.get(hostId);
-
-            synchronized (host) {
-                if (host.canSendMessage()) {
-                    long seqNumber = host.getNextSeqNumber();
-                    Message seqMessage = message.changeSeqNumber(seqNumber);
-                    sendNewMessage(seqMessage, host);
-                } else {
-                    host.addMessageInWaitingList(message);
-                }
-            }
+            host.addMessageInWaitingList(message);
+            emptyWaitingQueue(host);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -92,6 +83,7 @@ public class SeqLink extends AbstractLink {
     }
 
     private void sendMessage(Message message, InetAddress address, int port) throws InterruptedException {
+        message.signalBroadcast();
         byte[] buf = message.serialize();
         sendQueue.put(new DatagramPacket(buf, buf.length, address, port));
     }
@@ -112,9 +104,9 @@ public class SeqLink extends AbstractLink {
     private void emptyWaitingQueue(HostInfo host) throws InterruptedException {
         while (host.canSendWaitingMessages()) {
             Message m = host.getNextWaitingMessage();
-            long seqNumber = host.getNextSeqNumber();
-            Message seqMessage = m.changeSeqNumber(seqNumber);
             if (m != null) {
+                long seqNumber = host.getNextSeqNumber();
+                Message seqMessage = m.changeSeqNumber(seqNumber);
                 sendNewMessage(seqMessage, host);
             }
         }
