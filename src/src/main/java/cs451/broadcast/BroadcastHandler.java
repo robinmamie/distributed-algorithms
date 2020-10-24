@@ -13,6 +13,9 @@ public class BroadcastHandler {
 
     private static Broadcast b;
 
+    private BroadcastHandler() {
+    }
+
     static void create(boolean isFifo, Parser parser, BlockingQueue<String> toOutput) {
         if (isFifo) {
             int myPort = parser.hosts().get(parser.myId() - 1).getPort();

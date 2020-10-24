@@ -27,14 +27,13 @@ public class UrbFifo implements Broadcast {
     private long startTime = 0;
 
     public UrbFifo(int port, List<Host> hosts, int myId, BListener deliver) {
-        this.link = Link.getLink(port, hosts, myId);
+        this.link = Link.getLink(port, hosts, m -> deliver(m), myId);
         this.threshold = hosts.size() / 2;
         this.myId = myId;
         this.hosts = hosts;
-        this.link.addListener(m -> deliver(m));
         this.deliver = deliver;
 
-        for (Host host: hosts) {
+        for (Host host : hosts) {
             delivered.put(host.getId(), new VectorClock());
         }
     }
@@ -76,10 +75,10 @@ public class UrbFifo implements Broadcast {
         ack.add(m.getLastHop());
 
         m = m.changeLastHop(myId);
-        for (Host host: hosts) {
+        for (Host host : hosts) {
             if (!ack.contains(host.getId())) {
                 link.send(m, host.getId());
             }
         }
-    }  
+    }
 }

@@ -15,16 +15,14 @@ public interface Link {
 
     /**
      * Send a message through a link.
-     * 
+     *
      * @param message The message to be sent.
      * @param address The address of the recipient.
-     * @param port The port number of the recipient.
+     * @param port    The port number of the recipient.
      */
     void send(Message message, int hostId);
 
-    void addListener(BListener listener);
-
-    static Link getLink(int port, List<Host> hosts, int myId) {
-        return new SeqLink(port, hosts, myId);
+    static Link getLink(int port, List<Host> hosts, BListener listener, int myId) {
+        return new PerfectLink(port, hosts, listener, myId);
     }
 }

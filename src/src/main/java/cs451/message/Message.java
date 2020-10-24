@@ -7,20 +7,22 @@ public class Message {
     public static final class IntPair {
         private final int a;
         private final int b;
+
         public IntPair(int a, int b) {
             this.a = a;
             this.b = b;
         }
+
         @Override
         public boolean equals(Object that) {
-            return that instanceof IntPair
-                && this.a == ((IntPair)that).a
-                && this.b == ((IntPair)that).b;
+            return that instanceof IntPair && this.a == ((IntPair) that).a && this.b == ((IntPair) that).b;
         }
+
         @Override
         public int hashCode() {
             return (a * 31) + (b * 17);
         }
+
         @Override
         public String toString() {
             return "(" + a + "," + b + ")";
@@ -31,22 +33,24 @@ public class Message {
         private final int a;
         private final int b;
         private final int c;
+
         public IntTriple(int a, int b, int c) {
             this.a = a;
             this.b = b;
             this.c = c;
         }
+
         @Override
         public boolean equals(Object that) {
-            return that instanceof IntTriple
-                && this.a == ((IntTriple)that).a
-                && this.b == ((IntTriple)that).b
-                && this.c == ((IntTriple)that).c;
+            return that instanceof IntTriple && this.a == ((IntTriple) that).a && this.b == ((IntTriple) that).b
+                    && this.c == ((IntTriple) that).c;
         }
+
         @Override
         public int hashCode() {
             return (a * 31) + (b * 17) + (c * 13);
         }
+
         @Override
         public String toString() {
             return "(" + a + "," + b + "," + c + ")";
@@ -60,38 +64,47 @@ public class Message {
     private final boolean ack;
     private final long seqNumber;
     private final BListener listener;
+    private final boolean alreadyHandled;
 
-    private Message(int originId, int messageId, int lastHop, long seqNumber, boolean ack, BListener listener) {
+    private Message(int originId, int messageId, int lastHop, long seqNumber, boolean ack, BListener listener,
+            boolean alreadyHandled) {
         this.originId = originId;
         this.messageId = messageId;
         this.lastHop = lastHop;
         this.ack = ack;
         this.seqNumber = seqNumber;
         this.listener = listener;
+        this.alreadyHandled = alreadyHandled;
     }
 
     public static Message createMessage(int originId, int messageId, BListener listener) {
-        return new Message(originId, messageId, originId, -1, false, listener);
+        return new Message(originId, messageId, originId, -1, false, listener, false);
     }
 
     public static Message createMessage(int originId, int messageId) {
-        return createMessage(originId, messageId, m -> {});
+        return createMessage(originId, messageId, m -> {
+        });
     }
 
     public Message toAck(int myId) {
-        return new Message(originId, messageId, myId, seqNumber, true, listener);
+        return new Message(originId, messageId, myId, seqNumber, true, listener, alreadyHandled);
     }
 
     public Message changeLastHop(int myId) {
-        return new Message(originId, messageId, myId, seqNumber, ack, listener);
+        return new Message(originId, messageId, myId, seqNumber, ack, listener, alreadyHandled);
     }
 
     public Message changeSeqNumber(long seqNumber) {
-        return new Message(originId, messageId, lastHop, seqNumber, ack, listener);
+        return new Message(originId, messageId, lastHop, seqNumber, ack, listener, alreadyHandled);
     }
 
-    public Message eraseListener() {
-        return new Message(originId, messageId, lastHop, seqNumber, ack, m -> {});
+    public Message setFlagAlreadyHandled(boolean alreadyHandled) {
+        return new Message(originId, messageId, lastHop, seqNumber, ack, listener, alreadyHandled);
+    }
+
+    public Message resetSignalBroadcast() {
+        return new Message(originId, messageId, lastHop, seqNumber, ack, m -> {
+        }, alreadyHandled);
     }
 
     public int getOriginId() {
@@ -105,13 +118,17 @@ public class Message {
     public int getLastHop() {
         return lastHop;
     }
-    
+
     public long getSeqNumber() {
         return seqNumber;
     }
 
     public boolean isAck() {
         return ack;
+    }
+
+    public boolean isAlreadyHandled() {
+        return alreadyHandled;
     }
 
     public IntPair getId() {
@@ -123,9 +140,7 @@ public class Message {
     }
 
     public boolean isCorrectAck(Message that) {
-        return ack
-            && this.getOriginId() == that.getOriginId()
-            && this.getMessageId() == that.getMessageId();
+        return ack && this.getOriginId() == that.getOriginId() && this.getMessageId() == that.getMessageId();
     }
 
     public void signalBroadcast() {
@@ -134,8 +149,7 @@ public class Message {
 
     @Override
     public boolean equals(Object that) {
-        return that instanceof Message
-            && this.getId().equals(((Message)that).getId());
+        return that instanceof Message && this.getId().equals(((Message) that).getId());
     }
 
     @Override
@@ -145,7 +159,8 @@ public class Message {
 
     @Override
     public String toString() {
-        return (ack ? "Ack" : "Message") + " #" + messageId + " from " + originId + " | last hop " + lastHop + ", seq " + seqNumber;
+        return (ack ? "Ack" : "Message") + " #" + messageId + " from " + originId + " | last hop " + lastHop + ", seq "
+                + seqNumber;
     }
 
     public byte[] serialize() {
@@ -164,6 +179,7 @@ public class Message {
         int lastHop = ByteOp.byteToByteInt(datagram, 5);
         long seqNumber = ByteOp.byteToLong(datagram, 6);
         boolean ack = datagram[14] != 0;
-        return new Message(originId, messageId, lastHop, seqNumber, ack, m -> {});
+        return new Message(originId, messageId, lastHop, seqNumber, ack, m -> {
+        }, false);
     }
 }

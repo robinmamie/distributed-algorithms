@@ -1,20 +1,23 @@
 package cs451.link;
 
-import java.net.InetAddress;
-
 import cs451.listener.BListener;
 import cs451.message.Message;
 
 abstract class AbstractLink implements Link {
 
-    private BListener listener;
+    private final BListener listener;
+    private final int myId;
 
-    @Override
-    public void addListener(BListener listener) {
+    protected AbstractLink(BListener listener, int myId) {
         this.listener = listener;
+        this.myId = myId;
     }
 
-    protected void handleListeners(Message m, InetAddress a, int p) {
+    protected void handleListener(Message m) {
         listener.apply(m);
+    }
+
+    protected int getMyId() {
+        return myId;
     }
 }

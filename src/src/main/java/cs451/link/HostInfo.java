@@ -21,10 +21,12 @@ class HostInfo {
 
     private final InetAddress address;
     private final int port;
+    private final int windowSize;
 
-    public HostInfo(InetAddress address, int port) {
+    public HostInfo(InetAddress address, int port, int numHosts) {
         this.address = address;
         this.port = port;
+        this.windowSize = StubbornLink.WINDOW_SIZE / numHosts;
     }
 
     public InetAddress getAddress() {
@@ -40,7 +42,7 @@ class HostInfo {
     }
 
     public boolean canSendMessage() {
-        return stubbornQueue.size() < SeqLink.WINDOW_SIZE;//vcAtDistantHost.getStateOfVc() + SeqLink.WINDOW_SIZE > sentCounter.get();
+        return sentCounter.get() - windowSize < vcAtDistantHost.getStateOfVc();
     }
 
     public WaitingPacket getNextStubborn() {
@@ -56,7 +58,7 @@ class HostInfo {
     }
 
     public boolean canSendWaitingMessages() {
-        return canSendMessage() && waitingQueue.size() > 0;
+        return canSendMessage() && !waitingQueue.isEmpty();
     }
 
     public Message getNextWaitingMessage() {
@@ -88,6 +90,6 @@ class HostInfo {
     }
 
     public void testAndDouble(long messageTimeout) {
-        currentTimeout.compareAndSet(messageTimeout, messageTimeout*2);
+        currentTimeout.compareAndSet(messageTimeout, messageTimeout * 2);
     }
 }
