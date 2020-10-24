@@ -29,35 +29,6 @@ public class Message {
         }
     }
 
-    public static final class IntTriple {
-        private final int a;
-        private final int b;
-        private final int c;
-
-        public IntTriple(int a, int b, int c) {
-            this.a = a;
-            this.b = b;
-            this.c = c;
-        }
-
-        @Override
-        public boolean equals(Object that) {
-            return that instanceof IntTriple && this.a == ((IntTriple) that).a && this.b == ((IntTriple) that).b
-                    && this.c == ((IntTriple) that).c;
-        }
-
-        @Override
-        public int hashCode() {
-            return (a * 31) + (b * 17) + (c * 13);
-        }
-
-        @Override
-        public String toString() {
-            return "(" + a + "," + b + "," + c + ")";
-        }
-    }
-
-    // note: ID is maximum 1 byte!
     private final int originId;
     private final int messageId;
     private final int lastHop;
@@ -133,10 +104,6 @@ public class Message {
 
     public IntPair getId() {
         return new IntPair(originId, messageId);
-    }
-
-    public IntTriple getFullId() {
-        return new IntTriple(originId, messageId, lastHop);
     }
 
     public boolean isCorrectAck(Message that) {

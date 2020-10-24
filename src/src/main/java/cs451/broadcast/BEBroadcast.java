@@ -7,7 +7,7 @@ import cs451.listener.BListener;
 import cs451.message.Message;
 import cs451.parser.Host;
 
-public class BEBroadcast implements Broadcast {
+class BEBroadcast implements Broadcast {
 
     private final List<Host> hosts;
     private final int myId;
@@ -25,12 +25,16 @@ public class BEBroadcast implements Broadcast {
 
     @Override
     public void broadcast(Message m) {
+        // Message from distant host already acked, so no need to resend the message
+        int sentFrom = m.getLastHop();
         m = m.changeLastHop(myId);
         for (Host host : hosts) {
-            if (myId != host.getId()) {
-                link.send(m, host.getId());
-            } else {
-                deliver.apply(m);
+            if (host.getId() != sentFrom || sentFrom == myId) {
+                if (myId != host.getId()) {
+                    link.send(m, host.getId());
+                } else {
+                    deliver.apply(m);
+                }
             }
         }
     }

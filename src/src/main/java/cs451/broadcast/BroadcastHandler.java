@@ -19,7 +19,7 @@ public class BroadcastHandler {
     static void create(boolean isFifo, Parser parser, BlockingQueue<String> toOutput) {
         if (isFifo) {
             int myPort = parser.hosts().get(parser.myId() - 1).getPort();
-            b = new UrbFifo(myPort, parser.hosts(), parser.myId(), m -> {
+            b = new FIFOBroadcast(myPort, parser.hosts(), parser.myId(), m -> {
                 try {
                     toOutput.put("d " + m.getOriginId() + " " + m.getMessageId());
                 } catch (InterruptedException e) {
