@@ -45,7 +45,6 @@ class FairLossLink extends AbstractLink {
     @Override
     public void send(Message message, int hostId) {
         HostInfo host = getHostInfo(hostId);
-        message.signalBroadcast();
         try {
             byte[] buf = message.serialize();
             sendQueue.put(new DatagramPacket(buf, buf.length, host.getAddress(), host.getPort()));
@@ -118,5 +117,10 @@ class FairLossLink extends AbstractLink {
 
     protected Map<Integer, HostInfo> getHostInfo() {
         return hostInfo;
+    }
+
+    @Override
+    public void sendRange(int hostId, int originId, int mId) {
+        throw new RuntimeException();
     }
 }

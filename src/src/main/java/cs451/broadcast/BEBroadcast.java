@@ -1,6 +1,7 @@
 package cs451.broadcast;
 
 import java.util.List;
+import java.util.function.IntConsumer;
 
 import cs451.link.Link;
 import cs451.listener.BListener;
@@ -15,12 +16,12 @@ class BEBroadcast implements Broadcast {
 
     private final Link link;
 
-    public BEBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
+    public BEBroadcast(int port, List<Host> hosts, int myId, BListener deliver, IntConsumer broadcastListener) {
         this.hosts = hosts;
         this.myId = myId;
         this.deliver = deliver;
 
-        this.link = Link.getLink(port, hosts, deliver, myId);
+        this.link = Link.getLink(port, hosts, deliver, myId, broadcastListener);
     }
 
     @Override
@@ -35,6 +36,22 @@ class BEBroadcast implements Broadcast {
                 } else {
                     deliver.apply(m);
                 }
+            }
+        }
+    }
+
+    public long getLocallyLastDeliveredMessage() {
+        return -1;
+    }
+
+    @Override
+    public void broadcastRange(int originId, int mId) {
+        if (originId != myId) {
+            throw new RuntimeException("Message ranges can only be broadcast from origin!");
+        }
+        for (Host host : hosts) {
+            if (myId != host.getId()) {
+                link.sendRange(host.getId(), originId, mId);
             }
         }
     }

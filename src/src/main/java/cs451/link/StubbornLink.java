@@ -3,6 +3,7 @@ package cs451.link;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.IntConsumer;
 
 import cs451.listener.BListener;
 import cs451.message.Message;
@@ -10,12 +11,13 @@ import cs451.parser.Host;
 
 class StubbornLink extends AbstractLink {
 
-    public static final int WINDOW_SIZE = 1 << 16;
     private final FairLossLink fLink;
+    private final IntConsumer broadcastListener;
 
-    public StubbornLink(int port, List<Host> hosts, BListener listener, int myId) {
+    public StubbornLink(int port, List<Host> hosts, BListener listener, int myId, IntConsumer broadcastListener) {
         super(listener, myId);
-        fLink = new FairLossLink(port, hosts, this::deliver, myId);
+        this.fLink = new FairLossLink(port, hosts, this::deliver, myId);
+        this.broadcastListener = broadcastListener;
         ExecutorService executor = Executors.newFixedThreadPool(2);
         executor.execute(this::stubbornSend);
     }
@@ -70,19 +72,34 @@ class StubbornLink extends AbstractLink {
     }
 
     private void emptyWaitingQueue(int hostId, HostInfo host) {
-        if (host.canSendWaitingMessages()) {
+        while (host.canSendWaitingMessages()) {
             Message m = host.getNextWaitingMessage();
             if (m != null) {
+                m.changeLastHop(getMyId());
                 long seqNumber = host.getNextSeqNumber();
                 Message seqMessage = m.changeSeqNumber(seqNumber);
                 fLink.send(seqMessage, hostId);
-                WaitingPacket wpa = new WaitingPacket(seqMessage.resetSignalBroadcast(), host);
+                WaitingPacket wpa = new WaitingPacket(seqMessage, host);
                 try {
                     host.addPacketToConfirm(wpa);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
+                if (m.getOriginId() == getMyId()) {
+                    int min = Integer.MAX_VALUE;
+                    for (HostInfo h: fLink.getHostInfo().values()) {
+                        int candidate = h.peekNextToSend(getMyId());
+                        if (candidate < min) min = candidate;
+                    }
+                    broadcastListener.accept(min-1);
+                }
             }
         }
+    }
+
+    @Override
+    public void sendRange(int hostId, int originId, int mId) {
+        HostInfo hostInfo = fLink.getHostInfo(hostId);
+        hostInfo.sendRange(originId, 1, mId);
     }
 }

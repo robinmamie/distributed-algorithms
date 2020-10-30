@@ -1,7 +1,5 @@
 package cs451.message;
 
-import cs451.listener.BListener;
-
 public class Message {
 
     public static final class IntPair {
@@ -34,48 +32,35 @@ public class Message {
     private final int lastHop;
     private final boolean ack;
     private final long seqNumber;
-    private final BListener listener;
     private final boolean alreadyHandled;
 
-    private Message(int originId, int messageId, int lastHop, long seqNumber, boolean ack, BListener listener,
-            boolean alreadyHandled) {
+    private Message(int originId, int messageId, int lastHop, long seqNumber, boolean ack, boolean alreadyHandled) {
         this.originId = originId;
         this.messageId = messageId;
         this.lastHop = lastHop;
         this.ack = ack;
         this.seqNumber = seqNumber;
-        this.listener = listener;
         this.alreadyHandled = alreadyHandled;
     }
 
-    public static Message createMessage(int originId, int messageId, BListener listener) {
-        return new Message(originId, messageId, originId, -1, false, listener, false);
-    }
-
     public static Message createMessage(int originId, int messageId) {
-        return createMessage(originId, messageId, m -> {
-        });
+        return new Message(originId, messageId, originId, -1, false, false);
     }
 
     public Message toAck(int myId) {
-        return new Message(originId, messageId, myId, seqNumber, true, listener, alreadyHandled);
+        return new Message(originId, messageId, myId, seqNumber, true, alreadyHandled);
     }
 
     public Message changeLastHop(int myId) {
-        return new Message(originId, messageId, myId, seqNumber, ack, listener, alreadyHandled);
+        return new Message(originId, messageId, myId, seqNumber, ack, alreadyHandled);
     }
 
     public Message changeSeqNumber(long seqNumber) {
-        return new Message(originId, messageId, lastHop, seqNumber, ack, listener, alreadyHandled);
+        return new Message(originId, messageId, lastHop, seqNumber, ack, alreadyHandled);
     }
 
     public Message setFlagAlreadyHandled(boolean alreadyHandled) {
-        return new Message(originId, messageId, lastHop, seqNumber, ack, listener, alreadyHandled);
-    }
-
-    public Message resetSignalBroadcast() {
-        return new Message(originId, messageId, lastHop, seqNumber, ack, m -> {
-        }, alreadyHandled);
+        return new Message(originId, messageId, lastHop, seqNumber, ack, alreadyHandled);
     }
 
     public int getOriginId() {
@@ -110,10 +95,6 @@ public class Message {
         return ack && this.getOriginId() == that.getOriginId() && this.getMessageId() == that.getMessageId();
     }
 
-    public void signalBroadcast() {
-        listener.apply(this);
-    }
-
     @Override
     public boolean equals(Object that) {
         return that instanceof Message && this.getId().equals(((Message) that).getId());
@@ -146,7 +127,6 @@ public class Message {
         int lastHop = ByteOp.byteToByteInt(datagram, 5);
         long seqNumber = ByteOp.byteToLong(datagram, 6);
         boolean ack = datagram[14] != 0;
-        return new Message(originId, messageId, lastHop, seqNumber, ack, m -> {
-        }, false);
+        return new Message(originId, messageId, lastHop, seqNumber, ack, false);
     }
 }

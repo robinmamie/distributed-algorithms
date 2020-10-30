@@ -1,27 +1,30 @@
 package cs451.broadcast;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.function.IntConsumer;
 
 import cs451.listener.BListener;
 import cs451.message.Message;
 import cs451.parser.Host;
 import cs451.vectorclock.VectorClock;
 
-public class FIFOBroadcast implements Broadcast {
+class FIFOBroadcast implements Broadcast {
 
     private final URBroadcast urBroadcast;
 
-    private final Map<Integer, VectorClock> delivered = new HashMap<>();
+    private final Map<Integer, VectorClock> delivered = new TreeMap<>();
 
     private final BListener deliver;
+    private final int myId;
 
     private long startTime;
 
-    public FIFOBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
-        this.urBroadcast = new URBroadcast(port, hosts, myId, this::deliver);
+    public FIFOBroadcast(int port, List<Host> hosts, int myId, BListener deliver, IntConsumer broadcastListener) {
+        this.urBroadcast = new URBroadcast(port, hosts, myId, this::deliver, broadcastListener);
         this.deliver = deliver;
+        this.myId = myId;
 
         for (Host host : hosts) {
             delivered.put(host.getId(), new VectorClock());
@@ -48,4 +51,12 @@ public class FIFOBroadcast implements Broadcast {
         urBroadcast.broadcast(m);
     }
 
+    public long getLocallyLastDeliveredMessage() {
+        return delivered.get(myId).getStateOfVc();
+    }
+
+    @Override
+    public void broadcastRange(int originId, int mId) {
+        urBroadcast.broadcastRange(originId, mId);
+    }
 }

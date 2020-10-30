@@ -72,8 +72,7 @@ public class Main {
         new Thread(() -> { 
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
                 while (true) {
-                    String out = toOutput.take();
-                    writer.write(out);
+                    writer.write(toOutput.take());
                     writer.newLine();
                     writer.flush();
                 }

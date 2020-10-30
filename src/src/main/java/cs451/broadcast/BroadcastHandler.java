@@ -4,14 +4,14 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.LinkedBlockingQueue;
 
-import cs451.message.Message;
 import cs451.parser.Parser;
 
 public class BroadcastHandler {
 
     private static Broadcast b;
+    private static BlockingQueue<Integer> bq = new LinkedBlockingQueue<>();
 
     private BroadcastHandler() {
     }
@@ -22,6 +22,13 @@ public class BroadcastHandler {
             b = new FIFOBroadcast(myPort, parser.hosts(), parser.myId(), m -> {
                 try {
                     toOutput.put("d " + m.getOriginId() + " " + m.getMessageId());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }, value -> {
+                try {
+                    bq.put(value);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     return;
@@ -42,26 +49,17 @@ public class BroadcastHandler {
 
     private static void startFifo(Parser parser, BlockingQueue<String> toOutput) {
         final int nbMessages = readConfig(parser.config());
-        final AtomicInteger messageCount = new AtomicInteger(nbMessages);
+
+        b.broadcastRange(parser.myId(), nbMessages);
 
         // Broadcast
         for (int i = 1; i <= nbMessages; ++i) {
-            final AtomicInteger count = new AtomicInteger(parser.hosts().size() - 1);
-            final Message m = Message.createMessage(parser.myId(), i, mes -> {
-                if (count.decrementAndGet() == 0) {
-                    try {
-                        toOutput.put("b " + mes.getMessageId());
-                        messageCount.decrementAndGet();
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
-            });
-            b.broadcast(m);
-        }
-        while (messageCount.get() != 0) {
             try {
-                Thread.sleep(1);
+                int reported = 0;
+                while (reported < i) {
+                    reported = bq.take();
+                }
+                toOutput.put("b " + i);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return;
