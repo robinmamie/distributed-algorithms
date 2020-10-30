@@ -48,7 +48,7 @@ class HostInfo {
     }
 
     public boolean canSendMessage() {
-        return stubbornQueue.size() < windowSize;//sentCounter.get() - windowSize < vcAtDistantHost.getStateOfVc();
+        return stubbornQueue.size() < windowSize;
     }
 
     public WaitingPacket getNextStubborn() {
@@ -59,7 +59,7 @@ class HostInfo {
         stubbornQueue.put(wp);
     }
 
-    public void addMessageInWaitingList(Message message) throws InterruptedException {
+    public void addMessageInWaitingList(Message message) {
         waitingQueue.get(message.getOriginId()).add(message.getMessageId());
     }
 
@@ -68,7 +68,7 @@ class HostInfo {
     }
 
     public int peekNextToSend(int originId) {
-        return (int)waitingQueue.get(originId).peek();
+        return (int) waitingQueue.get(originId).peek();
     }
 
     public boolean canSendWaitingMessages() {
@@ -80,17 +80,15 @@ class HostInfo {
         if (mId < 0) {
             return null;
         }
-        return Message.createMessage(hostId, (int)mId);
+        return Message.createMessage(hostId, (int) mId);
     }
 
     public Message getNextWaitingMessage() {
         int index = -1;
         long min = Long.MAX_VALUE;
-        for (Map.Entry<Integer, MessageRange> me: waitingQueue.entrySet()) {
+        for (Map.Entry<Integer, MessageRange> me : waitingQueue.entrySet()) {
             long candidate = me.getValue().peek();
-            if (candidate < 0) {
-                continue;
-            } else if (candidate < min) {
+            if (0 < candidate && candidate < min) {
                 index = me.getKey();
                 min = candidate;
             }
@@ -107,7 +105,6 @@ class HostInfo {
 
     public void updateReceiveVectorClock(long messageSeqNumber) {
         vcAtDistantHost.addMember(messageSeqNumber);
-        //System.out.println("distant: " + vcAtDistantHost.getRange());
     }
 
     public boolean hasReceivedMessage(long seqNumber) {
@@ -116,7 +113,6 @@ class HostInfo {
 
     public void updateLocalReceiveVectorClock(long messageSeqNumber) {
         vcOfMessagesFromDistantHost.addMember(messageSeqNumber);
-        //System.out.println("local: " + vcOfMessagesFromDistantHost.getRange());
     }
 
     public long getTimeout() {
@@ -128,6 +124,8 @@ class HostInfo {
     }
 
     public void testAndDouble(long messageTimeout) {
-        currentTimeout.compareAndSet(messageTimeout, messageTimeout * 2);
+        if (currentTimeout.get() < TIMEOUT_MS * 8) {
+            currentTimeout.compareAndSet(messageTimeout, messageTimeout * 2);
+        }
     }
 }

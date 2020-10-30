@@ -41,7 +41,7 @@ class URBroadcast implements Broadcast {
             if (!delivered.get(origin).isPast(mId)) {
                 int count = acks.addAndReturnCount(m);
                 if (count == 1) {
-                    broadcast(m);
+                    broadcast(m.changeLastHop(myId));
                 }
                 if (count > threshold) {
                     delivered.get(origin).addMember(mId);

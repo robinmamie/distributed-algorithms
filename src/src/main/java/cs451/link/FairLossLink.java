@@ -45,6 +45,7 @@ class FairLossLink extends AbstractLink {
     @Override
     public void send(Message message, int hostId) {
         HostInfo host = getHostInfo(hostId);
+        message = message.changeLastHop(getMyId());
         try {
             byte[] buf = message.serialize();
             sendQueue.put(new DatagramPacket(buf, buf.length, host.getAddress(), host.getPort()));
@@ -65,8 +66,8 @@ class FairLossLink extends AbstractLink {
                 Thread.currentThread().interrupt();
                 return;
             }
-
-            handleListener(Message.deserialize(packet.getData()));
+            Message message = Message.deserialize(packet.getData());
+            handleListener(message);
         }
     }
 
@@ -86,7 +87,7 @@ class FairLossLink extends AbstractLink {
     private void listen() {
         try {
             while (true) {
-                byte[] buf = new byte[UDP_SAFE_PACKET_MAX_SIZE];
+                byte[] buf = new byte[15];
                 DatagramPacket packet = new DatagramPacket(buf, buf.length);
                 socket.receive(packet);
                 receiveQueue.put(packet);

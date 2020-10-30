@@ -23,6 +23,7 @@ public interface Link {
      * @param port    The port number of the recipient.
      */
     void send(Message message, int hostId);
+
     void sendRange(int hostId, int originId, int mId);
 
     static Link getLink(int port, List<Host> hosts, BListener listener, int myId, IntConsumer broadcastListener) {

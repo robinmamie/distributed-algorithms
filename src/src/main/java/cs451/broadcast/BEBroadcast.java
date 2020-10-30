@@ -28,7 +28,6 @@ class BEBroadcast implements Broadcast {
     public void broadcast(Message m) {
         // Message from distant host already acked, so no need to resend the message
         int sentFrom = m.getLastHop();
-        m = m.changeLastHop(myId);
         for (Host host : hosts) {
             if (host.getId() != sentFrom || sentFrom == myId) {
                 if (myId != host.getId()) {

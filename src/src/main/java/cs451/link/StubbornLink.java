@@ -25,16 +25,15 @@ class StubbornLink extends AbstractLink {
     @Override
     public void send(Message message, int hostId) {
         HostInfo host = fLink.getHostInfo(hostId);
-        try {
-            host.addMessageInWaitingList(message);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        host.addMessageInWaitingList(message);
     }
 
     private void deliver(Message m) {
         int hostId = m.getLastHop();
         HostInfo host = fLink.getHostInfo(hostId);
+        if (hostId == getMyId()) {
+            System.out.println(m);
+        }
         host.resetTimeout();
 
         long mSeqNumber = m.getSeqNumber();
@@ -74,25 +73,27 @@ class StubbornLink extends AbstractLink {
     private void emptyWaitingQueue(int hostId, HostInfo host) {
         while (host.canSendWaitingMessages()) {
             Message m = host.getNextWaitingMessage();
-            if (m != null) {
-                m.changeLastHop(getMyId());
-                long seqNumber = host.getNextSeqNumber();
-                Message seqMessage = m.changeSeqNumber(seqNumber);
-                fLink.send(seqMessage, hostId);
-                WaitingPacket wpa = new WaitingPacket(seqMessage, host);
-                try {
-                    host.addPacketToConfirm(wpa);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+            if (m == null) {
+                return;
+            }
+
+            long seqNumber = host.getNextSeqNumber();
+            Message seqMessage = m.changeSeqNumber(seqNumber);
+            fLink.send(seqMessage, hostId);
+            WaitingPacket wpa = new WaitingPacket(seqMessage, host);
+            try {
+                host.addPacketToConfirm(wpa);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            if (m.getOriginId() == getMyId()) {
+                int min = Integer.MAX_VALUE;
+                for (HostInfo h : fLink.getHostInfo().values()) {
+                    int candidate = h.peekNextToSend(getMyId());
+                    if (candidate < min)
+                        min = candidate;
                 }
-                if (m.getOriginId() == getMyId()) {
-                    int min = Integer.MAX_VALUE;
-                    for (HostInfo h: fLink.getHostInfo().values()) {
-                        int candidate = h.peekNextToSend(getMyId());
-                        if (candidate < min) min = candidate;
-                    }
-                    broadcastListener.accept(min-1);
-                }
+                broadcastListener.accept(min - 1);
             }
         }
     }
