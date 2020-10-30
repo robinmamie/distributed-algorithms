@@ -29,7 +29,7 @@ class HostInfo {
     public HostInfo(InetAddress address, int port, int numHosts) {
         this.address = address;
         this.port = port;
-        this.windowSize = Link.WINDOW_SIZE / numHosts;
+        this.windowSize = Link.WINDOW_SIZE / numHosts / 2;
         for (int i = 1; i <= numHosts; ++i) {
             waitingQueue.put(i, new MessageRange());
         }

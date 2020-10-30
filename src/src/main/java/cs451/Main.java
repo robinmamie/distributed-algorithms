@@ -14,7 +14,7 @@ import cs451.parser.Parser;
 public class Main {
 
     private static String outputFile;
-    private static BlockingQueue<String> toOutput = new LinkedBlockingQueue<>();
+    private static BlockingQueue<String> toOutput = new LinkedBlockingQueue<>(10000);
 
     private static void handleSignal() {
         // immediately stop network packet processing
@@ -48,11 +48,12 @@ public class Main {
 
         long pid = parser.pid();
         System.out.println("My PID is " + pid + ".");
-        System.out.println("Use 'kill -SIGINT " + pid + " ' or 'kill -SIGTERM " + pid + " ' to stop processing packets.");
+        System.out
+                .println("Use 'kill -SIGINT " + pid + " ' or 'kill -SIGTERM " + pid + " ' to stop processing packets.");
 
         System.out.println("My id is " + parser.myId() + ".");
         System.out.println("List of hosts is:");
-        for (Host host: parser.hosts()) {
+        for (Host host : parser.hosts()) {
             System.out.println(host.getId() + ", " + host.getIp() + ", " + host.getPort());
         }
 
@@ -65,11 +66,12 @@ public class Main {
             System.out.println("Config: " + parser.config());
         }
 
-        Coordinator coordinator = new Coordinator(parser.myId(), parser.barrierIp(), parser.barrierPort(), parser.signalIp(), parser.signalPort());
+        Coordinator coordinator = new Coordinator(parser.myId(), parser.barrierIp(), parser.barrierPort(),
+                parser.signalIp(), parser.signalPort());
         final boolean fifo = true;
-        //final boolean lcausal = false;
+        // final boolean lcausal = false;
 
-        new Thread(() -> { 
+        new Thread(() -> {
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
                 while (true) {
                     writer.write(toOutput.take());
@@ -84,7 +86,7 @@ public class Main {
         }).start();
 
         Broadcast.prepare(fifo, parser, toOutput);
-    
+
         System.out.println("Waiting for all processes for finish initialization");
         coordinator.waitOnBarrier();
 
