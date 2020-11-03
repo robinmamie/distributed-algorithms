@@ -55,7 +55,7 @@ public class Main {
         final boolean fifo = true;
         // final boolean lcausal = false;
 
-        Broadcast.prepare(fifo, parser);
+        Broadcast.prepare(fifo, parser, coordinator);
 
         System.out.println("Waiting for all processes for finish initialization");
         coordinator.waitOnBarrier();
@@ -63,9 +63,6 @@ public class Main {
         System.out.println("Broadcasting messages...");
 
         Broadcast.handle(fifo, parser);
-
-        System.out.println("Signaling end of broadcasting messages");
-        coordinator.finishedBroadcasting();
 
         while (true) {
             // Sleep for 1 hour

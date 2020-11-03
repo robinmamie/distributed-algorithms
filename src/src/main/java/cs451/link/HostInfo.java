@@ -74,15 +74,11 @@ public class HostInfo {
     }
 
     public void addMessageInWaitingList(Message message) {
-        waitingQueue.get(message.getOriginId()).add(message.getMessageId());
+        waitingQueue.get(message.getOriginId()).addSync(message.getMessageId());
     }
 
     public void sendRange(int originId, int a, int b) {
         waitingQueue.get(originId).setRange(a, b);
-    }
-
-    public int peekNextToSend(int originId) {
-        return waitingQueue.get(originId).peek();
     }
 
     public boolean canSendWaitingMessages() {

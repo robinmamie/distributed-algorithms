@@ -6,15 +6,14 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
+import cs451.parser.Coordinator;
 import cs451.parser.Parser;
 
 public class BroadcastHandler {
 
     private static Broadcast b;
-    private static BlockingQueue<Integer> bq = new LinkedBlockingQueue<>();
+    private static int nbMessagesToBroadcast;
 
     private static StringBuilder output = null;
     private static Writer writer;
@@ -42,36 +41,32 @@ public class BroadcastHandler {
         }
     }
 
-    static void create(boolean isFifo, Parser parser) {
+    static void create(boolean isFifo, Parser parser, Coordinator coordinator) {
         try {
             writer = new BufferedWriter(new FileWriter(parser.output()));
         } catch (IOException e1) {
             throw new RuntimeException("Cannot create output file.");
         }
         output = new StringBuilder(SB_SIZE);
+        nbMessagesToBroadcast = readConfig(parser.config());
 
         if (isFifo) {
             int myPort = parser.hosts().get(parser.myId() - 1).getPort();
             b = new FIFOBroadcast(myPort, parser.hosts(), parser.myId(), m -> {
-                synchronized (output) {
-                    output
-                        .append("d ")
-                        .append(m.getOriginId())
-                        .append(" ")
-                        .append(m.getMessageId())
-                        .append(System.lineSeparator());
-                }
+                output
+                    .append("d ")
+                    .append(m.getOriginId())
+                    .append(" ")
+                    .append(m.getMessageId())
+                    .append(System.lineSeparator());
             }, id -> {
-                synchronized (output) {
-                    output
-                        .append("b ")
-                        .append(id)
-                        .append(System.lineSeparator());
-                }
-                try {
-                    bq.put(id);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                output
+                    .append("b ")
+                    .append(id)
+                    .append(System.lineSeparator());
+                if (id == nbMessagesToBroadcast) {
+                    System.out.println("Signaling end of broadcasting messages");
+                    coordinator.finishedBroadcasting();
                 }
             });
         } else {
@@ -88,19 +83,7 @@ public class BroadcastHandler {
     }
 
     private static void startFifo(Parser parser) {
-        final int nbMessages = readConfig(parser.config());
-
-        b.broadcastRange(parser.myId(), nbMessages);
-
-        // Broadcast
-        for (int i = 1; i <= nbMessages; ++i) {
-            try {
-                bq.take();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
-            }
-        }
+        b.broadcastRange(parser.myId(), nbMessagesToBroadcast);
     }
 
     private static void startLCausal(Parser parser) {

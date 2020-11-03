@@ -2,6 +2,8 @@ package cs451.message;
 
 public class MessageRange {
 
+    private final static int TOKEN_EMPTY = Integer.MIN_VALUE;
+
     private static class Range {
         private int start;
         private int end;
@@ -72,45 +74,49 @@ public class MessageRange {
      * @return true if element was not yet present, false otherwise
      */
     public boolean add(int e) {
-        synchronized (lock) {
-            Range previous = null;
-            Range current = ranges;
+        Range previous = null;
+        Range current = ranges;
 
-            while (current != null) {
-                if (current.canExtend(e)) {
-                    current.mergeIfPossible(previous);
-                    return true;
-                }
-                if (current.contains(e)) {
-                    return false;
-                }
-                if (current.isWellAfter(e)) {
-                    Range newRange = new Range(e, e, current);
-                    if (previous == null) {
-                        ranges = newRange;
-                    } else {
-                        previous.setNext(newRange);
-                    }
-                    return true;
-                }
-                previous = current;
-                current = current.next();
+        while (current != null) {
+            if (current.canExtend(e)) {
+                current.mergeIfPossible(previous);
+                return true;
             }
+            if (current.contains(e)) {
+                return false;
+            }
+            if (current.isWellAfter(e)) {
+                Range newRange = new Range(e, e, current);
+                if (previous == null) {
+                    ranges = newRange;
+                } else {
+                    previous.setNext(newRange);
+                }
+                return true;
+            }
+            previous = current;
+            current = current.next();
+        }
 
-            if (previous == null) {
-                ranges = new Range(e, e);
-            } else {
-                previous.setNext(new Range(e, e));
-            }
+        if (previous == null) {
+            ranges = new Range(e, e);
+        } else {
+            previous.setNext(new Range(e, e));
         }
         return true;
+    }
+
+    public boolean addSync(int e) {
+        synchronized (lock) {
+            return add(e);
+        }
     }
 
     public int poll() {
         int firstElement;
         synchronized (lock) {
             if (ranges == null) {
-                return Integer.MIN_VALUE;
+                return TOKEN_EMPTY;
             }
             firstElement = ranges.getStart();
             if (firstElement == ranges.getEnd()) {
@@ -122,34 +128,24 @@ public class MessageRange {
         return firstElement;
     }
 
-    public int peek() {
-        synchronized (lock) {
-            return (ranges == null) ? Integer.MIN_VALUE : ranges.getStart();
-        }
-    }
-
     public boolean contains(int e) {
-        synchronized (lock) {
-            Range current = ranges;
-            while (current != null) {
-                if (e < current.getStart()) {
-                    return false;
-                } if (e <= current.getEnd()) {
-                    return true;
-                }
-                current = current.next();
+        Range current = ranges;
+        while (current != null) {
+            if (e < current.getStart()) {
+                return false;
+            } if (e <= current.getEnd()) {
+                return true;
             }
+            current = current.next();
         }
         return false;
     }
 
     public int endOfFirstRange() {
-        synchronized (lock) {
-            if (ranges == null) {
-                return -1;
-            }
-            return ranges.getEnd();
+        if (ranges == null) {
+            return TOKEN_EMPTY;
         }
+        return ranges.getEnd();
     }
 
     @Override
