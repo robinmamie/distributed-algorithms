@@ -1,16 +1,68 @@
 package cs451.message;
 
-import java.util.LinkedList;
-
 public class MessageRange {
 
-    private final LinkedList<Integer> ranges = new LinkedList<>();
+    private static class Range {
+        private int start;
+        private int end;
+        private Range next;
+        public Range(int start, int end, Range next) {
+            this.start = start;
+            this.end = end;
+            this.next = next;
+        }
+        public Range(int start, int end) {
+            this(start, end, null);
+        }
+        public boolean isWellAfter(int e) {
+            return e < start-1;
+        }
+        public boolean contains(int e) {
+            return start <= e && e <= end;
+        }
+        private void mergeIfPossible(Range previous) {
+            if (previous != null && previous.end + 1 == start) {
+                previous.end = end;
+                previous.next = next;
+            } else if (next != null && end + 1 == next.start) {
+                end = next.end;
+                next = next.next;
+            }
+        }
+        public boolean canExtend(int e) {
+            if (end + 1 == e) {
+                end = e;
+                return true;
+            }
+            if (start - 1 == e) {
+                start = e;
+                return true;
+            }
+            return false;
+        }
+        public Range next() {
+            return next;
+        }
+        public void setNext(Range next) {
+            this.next = next;
+        }
+        public int getStart() {
+            return start;
+        }
+        public int getEnd() {
+            return end;
+        }
+        public void incrementStart() {
+            start += 1;
+        }
+    }
+
+    private Range ranges = null;
+    private final Object lock = new Object();
 
     public void setRange(int a, int b) {
-        synchronized (ranges) {
-            ranges.clear();
-            ranges.add(a);
-            ranges.add(b);
+        synchronized (lock) {
+            ranges = new Range(a, b);
         }
     }
 
@@ -20,92 +72,97 @@ public class MessageRange {
      * @return true if element was not yet present, false otherwise
      */
     public boolean add(int e) {
-        synchronized (ranges) {
-            for (int i = 0; i < ranges.size(); i += 2) {
-                int startOfSubRange = ranges.get(i);
-                int endOfSubRange = ranges.get(i+1);
-                if (e < startOfSubRange) {
-                    if (e == startOfSubRange - 1) {
-                        ranges.set(i, e);
-                    } else {
-                        ranges.add(i, e);
-                        ranges.add(i, e);
-                    }
+        synchronized (lock) {
+            Range previous = null;
+            Range current = ranges;
+
+            while (current != null) {
+                if (current.canExtend(e)) {
+                    current.mergeIfPossible(previous);
                     return true;
-                } else if (e <= endOfSubRange) {
+                }
+                if (current.contains(e)) {
                     return false;
-                } else if (e == endOfSubRange+1) {
-                    if (i+2 < ranges.size() && ranges.get(i+2) == e+1) {
-                        ranges.remove(i+2);
-                        ranges.remove(i+1);
+                }
+                if (current.isWellAfter(e)) {
+                    Range newRange = new Range(e, e, current);
+                    if (previous == null) {
+                        ranges = newRange;
                     } else {
-                        ranges.set(i+1, e);
+                        previous.setNext(newRange);
                     }
                     return true;
                 }
+                previous = current;
+                current = current.next();
             }
-            ranges.add(e);
-            ranges.add(e);
-            return true;
+
+            if (previous == null) {
+                ranges = new Range(e, e);
+            } else {
+                previous.setNext(new Range(e, e));
+            }
         }
+        return true;
     }
 
     public int poll() {
-        synchronized (ranges) {
-            if (ranges.isEmpty()) {
+        int firstElement;
+        synchronized (lock) {
+            if (ranges == null) {
                 return Integer.MIN_VALUE;
             }
-            int firstElement = ranges.get(0);
-            if (firstElement == ranges.get(1)) {
-                ranges.remove(1);
-                ranges.remove(0);
+            firstElement = ranges.getStart();
+            if (firstElement == ranges.getEnd()) {
+                ranges = ranges.next();
             } else {
-                ranges.set(0, firstElement+1);
+                ranges.incrementStart();
             }
-            return firstElement;
         }
+        return firstElement;
     }
 
     public int peek() {
-        synchronized (ranges) {
-            if (ranges.isEmpty()) {
-                return Integer.MIN_VALUE;
-            }
-            return ranges.get(0);
+        synchronized (lock) {
+            return (ranges == null) ? Integer.MIN_VALUE : ranges.getStart();
         }
     }
 
     public boolean contains(int e) {
-        synchronized (ranges) {
-            for (int i = 0; i < ranges.size(); i+=2) {
-                if (e < ranges.get(i)) {
+        synchronized (lock) {
+            Range current = ranges;
+            while (current != null) {
+                if (e < current.getStart()) {
                     return false;
-                } if (e <= ranges.get(i+1)) {
+                } if (e <= current.getEnd()) {
                     return true;
                 }
+                current = current.next();
             }
         }
         return false;
     }
 
     public int endOfFirstRange() {
-        synchronized (ranges) {
-            if (ranges.isEmpty()) {
+        synchronized (lock) {
+            if (ranges == null) {
                 return -1;
             }
-            return ranges.get(1);
+            return ranges.getEnd();
         }
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < ranges.size(); i +=2) {
+        Range current = ranges;
+        while (current != null) {
             sb.append('(')
-                .append(ranges.get(i))
+                .append(current.getStart())
                 .append(',')
-                .append(ranges.get(i+1))
+                .append(current.getEnd())
                 .append(')');
+            current = current.next();
         }
         return sb.toString();
     }

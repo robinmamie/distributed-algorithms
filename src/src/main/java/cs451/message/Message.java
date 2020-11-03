@@ -2,12 +2,19 @@ package cs451.message;
 
 public class Message {
 
-    private final int originId;
+    private final byte originId;
     private final int messageId;
-    private final int lastHop;
+    private final byte lastHop;
     private final boolean ack;
 
     private Message(int originId, int messageId, int lastHop, boolean ack) {
+        this.originId = (byte) originId;
+        this.messageId = messageId;
+        this.lastHop = (byte) lastHop;
+        this.ack = ack;
+    }
+
+    private Message(byte originId, int messageId, byte lastHop, boolean ack) {
         this.originId = originId;
         this.messageId = messageId;
         this.lastHop = lastHop;
@@ -27,7 +34,7 @@ public class Message {
     }
 
     public int getOriginId() {
-        return originId;
+        return (int)originId & 0xFF;
     }
 
     public int getMessageId() {
@@ -35,7 +42,7 @@ public class Message {
     }
 
     public int getLastHop() {
-        return lastHop;
+        return (int)lastHop & 0xFF;
     }
 
     public boolean isAck() {
@@ -65,19 +72,22 @@ public class Message {
     }
 
     public byte[] serialize() {
-        byte[] datagram = new byte[7];
-        ByteOp.byteIntToByte(originId, datagram, 0);
-        ByteOp.intToByte(messageId, datagram, 1);
-        ByteOp.byteIntToByte(lastHop, datagram, 5);
-        datagram[6] = ack ? (byte) 0xFF : 0;
+        byte[] datagram = new byte[6];
+        datagram[0] = lastHop;
+        datagram[1] = originId;
+        ByteOp.intToByte(messageId, datagram, 2);
+        if (ack) {
+            datagram[2] |= (byte) 0x80;
+        }
         return datagram;
     }
 
     public static Message deserialize(byte[] datagram) {
-        int originId = ByteOp.byteToByteInt(datagram, 0);
-        int messageId = ByteOp.byteToInt(datagram, 1);
-        int lastHop = ByteOp.byteToByteInt(datagram, 5);
-        boolean ack = datagram[6] != 0;
+        int lastHop = datagram[0];
+        int originId = datagram[1];
+        boolean ack = (datagram[2] & (byte)0x80) != 0;
+        datagram[2] &= (byte) 0x7F;
+        int messageId = ByteOp.byteToInt(datagram, 2);
         return new Message(originId, messageId, lastHop, ack);
     }
 }

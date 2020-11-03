@@ -1,5 +1,6 @@
 package cs451.link;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
@@ -16,8 +17,8 @@ import cs451.parser.Host;
 class FairLossLink extends AbstractLink {
 
     private final DatagramSocket socket;
+    private final ExecutorService executor;
     private final BlockingQueue<DatagramPacket> sendQueue = new LinkedBlockingQueue<>();
-    private final BlockingQueue<DatagramPacket> receiveQueue = new LinkedBlockingQueue<>();
 
     public FairLossLink(int port, List<Host> hosts, BListener listener, int myId) {
         super(listener, myId, hosts);
@@ -27,10 +28,9 @@ class FairLossLink extends AbstractLink {
             throw new RuntimeException(e);
         }
 
-        ExecutorService executor = Executors.newFixedThreadPool(3);
+        this.executor = Executors.newFixedThreadPool(3);
         executor.execute(this::sendPackets);
-        executor.execute(this::listen);
-        executor.execute(this::deliver);
+        this.executor.execute(this::deliver);
     }
 
     // *** High level packet handling, outgoing ***
@@ -39,8 +39,8 @@ class FairLossLink extends AbstractLink {
     public void send(Message message, int hostId) {
         HostInfo host = getHostInfo(hostId);
         message = message.changeLastHop(getMyId());
+        byte[] buf = message.serialize();
         try {
-            byte[] buf = message.serialize();
             sendQueue.put(new DatagramPacket(buf, buf.length, host.getAddress(), host.getPort()));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -51,44 +51,32 @@ class FairLossLink extends AbstractLink {
 
     private void deliver() {
         DatagramPacket packet;
-
+        byte[] buf;
         while (true) {
+            buf = new byte[6];
+            packet = new DatagramPacket(buf, buf.length);
             try {
-                packet = receiveQueue.take();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
+                socket.receive(packet);
+            } catch (IOException e) {
+                throw new RuntimeException("Cannot receive packets!");
             }
             Message message = Message.deserialize(packet.getData());
-            handleListener(message);
+            executor.execute(() -> handleListener(message));
         }
     }
 
-    // *** Low level packet handling **
+        // *** Low level packet handling **
 
-    private void sendPackets() {
-        try {
-            while (true) {
-                DatagramPacket packet = sendQueue.take();
-                socket.send(packet);
+        private void sendPackets() {
+            try {
+                while (true) {
+                    DatagramPacket packet = sendQueue.take();
+                    socket.send(packet);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("Cannot send packets!");
             }
-        } catch (Exception e) {
-            throw new RuntimeException("Cannot send packets!");
         }
-    }
-
-    private void listen() {
-        try {
-            while (true) {
-                byte[] buf = new byte[15];
-                DatagramPacket packet = new DatagramPacket(buf, buf.length);
-                socket.receive(packet);
-                receiveQueue.put(packet);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Cannot receive packets!");
-        }
-    }
 
     @Override
     public void sendRange(int hostId, int originId, int mId) {

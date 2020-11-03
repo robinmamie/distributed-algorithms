@@ -11,7 +11,7 @@ import cs451.message.Message;
 import cs451.message.MessageRange;
 
 public class HostInfo {
-    public static final long TIMEOUT_MS = 1000;
+    public static final long TIMEOUT_MS = 800;
 
     private final BlockingQueue<WaitingPacket> stubbornQueue = new LinkedBlockingQueue<>();
     private final Map<Integer, MessageRange> waitingQueue = new TreeMap<>();
@@ -22,12 +22,15 @@ public class HostInfo {
     private final InetAddress address;
     private final int port;
     private final int windowSize;
+    private final int numHosts;
+    private int nextOriginToSend = 1;
 
     public HostInfo(InetAddress address, int port, int numHosts, int hostId) {
         this.address = address;
         this.port = port;
         this.hostId = hostId;
         this.windowSize = Link.WINDOW_SIZE / numHosts / 2;
+        this.numHosts = numHosts;
         for (int i = 1; i <= numHosts; ++i) {
             waitingQueue.put(i, new MessageRange());
             delivered.put(i, new MessageRange());
@@ -88,26 +91,17 @@ public class HostInfo {
 
     private Message getNextWaitingMessage(int hostId) {
         long mId = waitingQueue.get(hostId).poll();
-        if (mId < 0) {
-            return null;
-        }
-        return Message.createMessage(hostId, (int) mId);
+        return mId < 0 ? null : Message.createMessage(hostId, (int) mId);
     }
 
     public Message getNextWaitingMessage() {
-        int index = -1;
-        long min = Long.MAX_VALUE;
-        for (Map.Entry<Integer, MessageRange> me : waitingQueue.entrySet()) {
-            long candidate = me.getValue().peek();
-            if (0 < candidate && candidate < min) {
-                index = me.getKey();
-                min = candidate;
-            }
+        int nextHost = nextOriginToSend;
+        if (nextOriginToSend == numHosts) {
+            nextOriginToSend = 1;
+        } else {
+            nextOriginToSend += 1;
         }
-        if (index == -1) {
-            return null;
-        }
-        return getNextWaitingMessage(index);
+        return getNextWaitingMessage(nextHost);
     }
 
     public long getTimeout() {
@@ -119,7 +113,7 @@ public class HostInfo {
     }
 
     public void testAndDouble(long messageTimeout) {
-        if (currentTimeout.get() < TIMEOUT_MS * 8) {
+        if (currentTimeout.get() < TIMEOUT_MS * 16) {
             currentTimeout.compareAndSet(messageTimeout, messageTimeout * 2);
         }
     }

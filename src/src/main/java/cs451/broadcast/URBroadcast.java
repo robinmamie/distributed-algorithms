@@ -37,17 +37,16 @@ class URBroadcast implements Broadcast {
     private void deliver(Message m) {
         int origin = m.getOriginId();
         int mId = m.getMessageId();
-        synchronized (delivered) {
-            if (!delivered.get(origin).isPast(mId)) {
-                int count = acks.ackCount(m);
-                if (!acks.wasAlreadyBroadcast(m)) {
-                    acks.add(m);
-                    broadcast(m.changeLastHop(myId));
-                }
-                if (count > threshold) {
-                    delivered.get(origin).addMember(mId);
-                    deliver.apply(m);
-                }
+        if (!delivered.get(origin).isPast(mId)) {
+            if (!acks.wasAlreadyBroadcast(m)) {
+                acks.add(m);
+                broadcast(m.changeLastHop(myId));
+                return;
+            }
+            int count = acks.ackCount(m);
+            if (count > threshold) {
+                delivered.get(origin).addMember(mId);
+                deliver.apply(m);
             }
         }
     }

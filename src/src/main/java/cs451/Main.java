@@ -1,11 +1,5 @@
 package cs451;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-
 import cs451.broadcast.Broadcast;
 import cs451.parser.Coordinator;
 import cs451.parser.Host;
@@ -13,21 +7,12 @@ import cs451.parser.Parser;
 
 public class Main {
 
-    private static String outputFile;
-    private static BlockingQueue<String> toOutput = new LinkedBlockingQueue<>(10000);
-
     private static void handleSignal() {
         // immediately stop network packet processing
         System.out.println("Immediately stopping network packet processing.");
 
         // write/flush output file if necessary
-        while (toOutput.size() > 0) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
+        Broadcast.flushLog();
         System.out.println("Writing output.");
     }
 
@@ -60,7 +45,6 @@ public class Main {
         System.out.println("Barrier: " + parser.barrierIp() + ":" + parser.barrierPort());
         System.out.println("Signal: " + parser.signalIp() + ":" + parser.signalPort());
         System.out.println("Output: " + parser.output());
-        outputFile = parser.output();
         // if config is defined; always check before parser.config()
         if (parser.hasConfig()) {
             System.out.println("Config: " + parser.config());
@@ -71,28 +55,14 @@ public class Main {
         final boolean fifo = true;
         // final boolean lcausal = false;
 
-        new Thread(() -> {
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
-                while (true) {
-                    writer.write(toOutput.take());
-                    writer.newLine();
-                    writer.flush();
-                }
-            } catch (IOException e) {
-                throw new RuntimeException("Cannot write to output file!");
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
-
-        Broadcast.prepare(fifo, parser, toOutput);
+        Broadcast.prepare(fifo, parser);
 
         System.out.println("Waiting for all processes for finish initialization");
         coordinator.waitOnBarrier();
 
         System.out.println("Broadcasting messages...");
 
-        Broadcast.handle(fifo, parser, toOutput);
+        Broadcast.handle(fifo, parser);
 
         System.out.println("Signaling end of broadcasting messages");
         coordinator.finishedBroadcasting();

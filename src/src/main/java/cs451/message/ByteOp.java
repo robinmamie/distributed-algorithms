@@ -3,7 +3,7 @@ package cs451.message;
 class ByteOp {
 
     public static void byteIntToByte(int integer, byte[] array, int offset) {
-        array[offset] = (byte)((integer));
+        array[offset] = (byte) integer;
     }
 
     public static int byteToByteInt(byte[] array, int offset) {

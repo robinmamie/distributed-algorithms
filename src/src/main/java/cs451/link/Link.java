@@ -8,7 +8,7 @@ import cs451.parser.Host;
 
 public interface Link {
 
-    public static final int WINDOW_SIZE = 1 << 11;
+    public static final int WINDOW_SIZE = 1 << 13;
     /**
      * Determines the safe size for a UDP packet in this project.
      */
