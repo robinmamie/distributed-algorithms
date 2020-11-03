@@ -3,8 +3,8 @@ package cs451.broadcast;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.IntConsumer;
 
+import cs451.link.AbstractLink;
 import cs451.listener.BListener;
 import cs451.message.Message;
 import cs451.parser.Host;
@@ -22,9 +22,9 @@ class URBroadcast implements Broadcast {
     private final int threshold;
     private final int myId;
 
-    public URBroadcast(int port, List<Host> hosts, int myId, BListener deliver, IntConsumer broadcastListener) {
-        this.beBroadcast = new BEBroadcast(port, hosts, myId, this::deliver, broadcastListener);
-        this.acks = new BroadcastAcks(hosts.size(), myId);
+    public URBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
+        this.beBroadcast = new BEBroadcast(port, hosts, myId, this::deliver);
+        this.acks = new BroadcastAcks(hosts.size(), myId, AbstractLink.getHostInfo());
         this.deliver = deliver;
         this.threshold = hosts.size() / 2;
         this.myId = myId;
@@ -39,8 +39,9 @@ class URBroadcast implements Broadcast {
         int mId = m.getMessageId();
         synchronized (delivered) {
             if (!delivered.get(origin).isPast(mId)) {
-                int count = acks.addAndReturnCount(m);
-                if (count == 1) {
+                int count = acks.ackCount(m);
+                if (!acks.wasAlreadyBroadcast(m)) {
+                    acks.add(m);
                     broadcast(m.changeLastHop(myId));
                 }
                 if (count > threshold) {

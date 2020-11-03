@@ -17,13 +17,15 @@ class FIFOBroadcast implements Broadcast {
     private final Map<Integer, VectorClock> delivered = new TreeMap<>();
 
     private final BListener deliver;
+    private final IntConsumer broadcastListener;
     private final int myId;
 
     private long startTime;
 
     public FIFOBroadcast(int port, List<Host> hosts, int myId, BListener deliver, IntConsumer broadcastListener) {
-        this.urBroadcast = new URBroadcast(port, hosts, myId, this::deliver, broadcastListener);
+        this.urBroadcast = new URBroadcast(port, hosts, myId, this::deliver);
         this.deliver = deliver;
+        this.broadcastListener = broadcastListener;
         this.myId = myId;
 
         for (Host host : hosts) {
@@ -38,6 +40,9 @@ class FIFOBroadcast implements Broadcast {
         delivered.get(origin).addMember(mId);
         int end = (int) delivered.get(origin).getStateOfVc();
         for (int i = start + 1; i <= end; ++i) {
+            if (m.getOriginId() == myId) {
+                broadcastListener.accept(i);
+            }
             deliver.apply(Message.createMessage(origin, i));
         }
         if (startTime == 0) {

@@ -4,9 +4,9 @@ import java.util.LinkedList;
 
 public class MessageRange {
 
-    private final LinkedList<Long> ranges = new LinkedList<>();
+    private final LinkedList<Integer> ranges = new LinkedList<>();
 
-    public void setRange(long a, long b) {
+    public void setRange(int a, int b) {
         synchronized (ranges) {
             ranges.clear();
             ranges.add(a);
@@ -19,11 +19,11 @@ public class MessageRange {
      * @param e
      * @return true if element was not yet present, false otherwise
      */
-    public boolean add(long e) {
+    public boolean add(int e) {
         synchronized (ranges) {
             for (int i = 0; i < ranges.size(); i += 2) {
-                long startOfSubRange = ranges.get(i);
-                long endOfSubRange = ranges.get(i+1);
+                int startOfSubRange = ranges.get(i);
+                int endOfSubRange = ranges.get(i+1);
                 if (e < startOfSubRange) {
                     if (e == startOfSubRange - 1) {
                         ranges.set(i, e);
@@ -50,12 +50,12 @@ public class MessageRange {
         }
     }
 
-    public long poll() {
+    public int poll() {
         synchronized (ranges) {
             if (ranges.isEmpty()) {
                 return Integer.MIN_VALUE;
             }
-            long firstElement = ranges.get(0);
+            int firstElement = ranges.get(0);
             if (firstElement == ranges.get(1)) {
                 ranges.remove(1);
                 ranges.remove(0);
@@ -66,7 +66,7 @@ public class MessageRange {
         }
     }
 
-    public long peek() {
+    public int peek() {
         synchronized (ranges) {
             if (ranges.isEmpty()) {
                 return Integer.MIN_VALUE;
@@ -75,7 +75,7 @@ public class MessageRange {
         }
     }
 
-    public boolean contains(long e) {
+    public boolean contains(int e) {
         synchronized (ranges) {
             for (int i = 0; i < ranges.size(); i+=2) {
                 if (e < ranges.get(i)) {
@@ -88,7 +88,7 @@ public class MessageRange {
         return false;
     }
 
-    public long endOfFirstRange() {
+    public int endOfFirstRange() {
         synchronized (ranges) {
             if (ranges.isEmpty()) {
                 return -1;

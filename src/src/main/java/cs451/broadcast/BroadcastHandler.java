@@ -26,9 +26,10 @@ public class BroadcastHandler {
                     Thread.currentThread().interrupt();
                     return;
                 }
-            }, value -> {
+            }, id -> {
                 try {
-                    bq.put(value);
+                    toOutput.put("b " + id);
+                    bq.put(id);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     return;
@@ -55,11 +56,7 @@ public class BroadcastHandler {
         // Broadcast
         for (int i = 1; i <= nbMessages; ++i) {
             try {
-                int reported = 0;
-                while (reported < i) {
-                    reported = bq.take();
-                }
-                toOutput.put("b " + i);
+                bq.take();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return;

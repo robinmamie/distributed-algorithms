@@ -2,12 +2,8 @@ package cs451.link;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -22,17 +18,14 @@ class FairLossLink extends AbstractLink {
     private final DatagramSocket socket;
     private final BlockingQueue<DatagramPacket> sendQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<DatagramPacket> receiveQueue = new LinkedBlockingQueue<>();
-    private final Map<Integer, HostInfo> hostInfo = new TreeMap<>();
 
     public FairLossLink(int port, List<Host> hosts, BListener listener, int myId) {
-        super(listener, myId);
+        super(listener, myId, hosts);
         try {
             socket = new DatagramSocket(port);
         } catch (SocketException e) {
             throw new RuntimeException(e);
         }
-
-        createHostInfo(hosts);
 
         ExecutorService executor = Executors.newFixedThreadPool(3);
         executor.execute(this::sendPackets);
@@ -95,29 +88,6 @@ class FairLossLink extends AbstractLink {
         } catch (Exception e) {
             throw new RuntimeException("Cannot receive packets!");
         }
-    }
-
-    // *** Getters, creators ***
-
-    protected void createHostInfo(List<Host> hosts) {
-        for (Host host : hosts) {
-            int i = host.getId();
-            if (i != getMyId()) {
-                try {
-                    hostInfo.put(i, new HostInfo(InetAddress.getByName(host.getIp()), host.getPort(), hosts.size()));
-                } catch (UnknownHostException e) {
-                    throw new RuntimeException("Invalid IP address given!");
-                }
-            }
-        }
-    }
-
-    protected HostInfo getHostInfo(int hostId) {
-        return hostInfo.get(hostId);
-    }
-
-    protected Map<Integer, HostInfo> getHostInfo() {
-        return hostInfo;
     }
 
     @Override

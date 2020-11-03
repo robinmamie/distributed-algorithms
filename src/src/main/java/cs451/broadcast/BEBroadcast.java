@@ -1,7 +1,6 @@
 package cs451.broadcast;
 
 import java.util.List;
-import java.util.function.IntConsumer;
 
 import cs451.link.Link;
 import cs451.listener.BListener;
@@ -16,12 +15,12 @@ class BEBroadcast implements Broadcast {
 
     private final Link link;
 
-    public BEBroadcast(int port, List<Host> hosts, int myId, BListener deliver, IntConsumer broadcastListener) {
+    public BEBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
         this.hosts = hosts;
         this.myId = myId;
         this.deliver = deliver;
 
-        this.link = Link.getLink(port, hosts, deliver, myId, broadcastListener);
+        this.link = Link.getLink(port, hosts, deliver, myId);
     }
 
     @Override

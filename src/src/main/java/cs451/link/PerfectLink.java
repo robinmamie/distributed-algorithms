@@ -1,7 +1,6 @@
 package cs451.link;
 
 import java.util.List;
-import java.util.function.IntConsumer;
 
 import cs451.listener.BListener;
 import cs451.message.Message;
@@ -11,9 +10,9 @@ class PerfectLink extends AbstractLink {
 
     private final StubbornLink sLink;
 
-    public PerfectLink(int port, List<Host> hosts, BListener listener, int myId, IntConsumer broadcastListener) {
-        super(listener, myId);
-        this.sLink = new StubbornLink(port, hosts, this::deliver, myId, broadcastListener);
+    public PerfectLink(int port, List<Host> hosts, BListener listener, int myId) {
+        super(listener, myId, hosts);
+        this.sLink = new StubbornLink(port, hosts, this::deliver, myId);
     }
 
     @Override
@@ -22,7 +21,9 @@ class PerfectLink extends AbstractLink {
     }
 
     private void deliver(Message m) {
-        if (!m.isAlreadyHandled()) {
+        HostInfo hostInfo = getHostInfo(m.getLastHop());
+        if (!hostInfo.isDelivered(m)) {
+            hostInfo.markDelivered(m);
             handleListener(m);
         }
     }

@@ -10,11 +10,11 @@ public class VectorClock {
         range.add(0);
     }
 
-    public void addMember(long e) {
+    public void addMember(int e) {
         range.add(e);
     }
 
-    public boolean isPast(long e) {
+    public boolean isPast(int e) {
         return range.contains(e);
     }
 

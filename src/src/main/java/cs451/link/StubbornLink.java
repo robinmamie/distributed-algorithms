@@ -3,7 +3,6 @@ package cs451.link;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.IntConsumer;
 
 import cs451.listener.BListener;
 import cs451.message.Message;
@@ -12,53 +11,41 @@ import cs451.parser.Host;
 class StubbornLink extends AbstractLink {
 
     private final FairLossLink fLink;
-    private final IntConsumer broadcastListener;
 
-    public StubbornLink(int port, List<Host> hosts, BListener listener, int myId, IntConsumer broadcastListener) {
-        super(listener, myId);
+    public StubbornLink(int port, List<Host> hosts, BListener listener, int myId) {
+        super(listener, myId, hosts);
         this.fLink = new FairLossLink(port, hosts, this::deliver, myId);
-        this.broadcastListener = broadcastListener;
         ExecutorService executor = Executors.newFixedThreadPool(2);
         executor.execute(this::stubbornSend);
     }
 
     @Override
     public void send(Message message, int hostId) {
-        HostInfo host = fLink.getHostInfo(hostId);
+        HostInfo host = getHostInfo(hostId);
         host.addMessageInWaitingList(message);
     }
 
     private void deliver(Message m) {
         int hostId = m.getLastHop();
-        HostInfo host = fLink.getHostInfo(hostId);
-        if (hostId == getMyId()) {
-            System.out.println(m);
-        }
+        HostInfo host = getHostInfo(hostId);
         host.resetTimeout();
 
-        long mSeqNumber = m.getSeqNumber();
-        boolean alreadyHandled;
-        if (m.isAck()) {
-            alreadyHandled = host.hasAckedPacket(mSeqNumber);
-            host.updateReceiveVectorClock(mSeqNumber);
-        } else {
+        if (!m.isAck()) {
             fLink.send(m.toAck(getMyId()), hostId);
-            alreadyHandled = host.hasReceivedMessage(mSeqNumber);
-            host.updateLocalReceiveVectorClock(mSeqNumber);
         }
-        handleListener(m.setFlagAlreadyHandled(alreadyHandled));
+        handleListener(m);
     }
 
     private void stubbornSend() {
         while (true) {
-            fLink.getHostInfo().forEach(this::checkNextPacketToConfirm);
-            fLink.getHostInfo().forEach(this::emptyWaitingQueue);
+            getHostInfo().forEach(this::checkNextPacketToConfirm);
+            getHostInfo().forEach(this::emptyWaitingQueue);
         }
     }
 
     private void checkNextPacketToConfirm(int hostId, HostInfo host) {
         final WaitingPacket wp = host.getNextStubborn();
-        if (wp != null && !host.hasAckedPacket(wp.getMessage().getSeqNumber())) {
+        if (wp != null && !host.isDelivered(wp.getMessage())) {
             try {
                 WaitingPacket newWp = wp.resendIfTimedOut(() -> {
                     fLink.send(wp.getMessage(), hostId);
@@ -77,30 +64,19 @@ class StubbornLink extends AbstractLink {
                 return;
             }
 
-            long seqNumber = host.getNextSeqNumber();
-            Message seqMessage = m.changeSeqNumber(seqNumber);
-            fLink.send(seqMessage, hostId);
-            WaitingPacket wpa = new WaitingPacket(seqMessage, host);
+            fLink.send(m, hostId);
+            WaitingPacket wpa = new WaitingPacket(m, host);
             try {
                 host.addPacketToConfirm(wpa);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-            }
-            if (m.getOriginId() == getMyId()) {
-                int min = Integer.MAX_VALUE;
-                for (HostInfo h : fLink.getHostInfo().values()) {
-                    int candidate = h.peekNextToSend(getMyId());
-                    if (candidate < min)
-                        min = candidate;
-                }
-                broadcastListener.accept(min - 1);
             }
         }
     }
 
     @Override
     public void sendRange(int hostId, int originId, int mId) {
-        HostInfo hostInfo = fLink.getHostInfo(hostId);
+        HostInfo hostInfo = getHostInfo(hostId);
         hostInfo.sendRange(originId, 1, mId);
     }
 }

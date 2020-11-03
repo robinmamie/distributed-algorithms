@@ -9,29 +9,28 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import cs451.message.Message;
 import cs451.message.MessageRange;
-import cs451.vectorclock.VectorClock;
 
-class HostInfo {
+public class HostInfo {
     public static final long TIMEOUT_MS = 1000;
 
-    private final VectorClock vcAtDistantHost = new VectorClock();
-    private final VectorClock vcOfMessagesFromDistantHost = new VectorClock();
-
-    private final AtomicLong sentCounter = new AtomicLong(0L);
     private final BlockingQueue<WaitingPacket> stubbornQueue = new LinkedBlockingQueue<>();
     private final Map<Integer, MessageRange> waitingQueue = new TreeMap<>();
+    private final Map<Integer, MessageRange> delivered = new TreeMap<>();
     private final AtomicLong currentTimeout = new AtomicLong(TIMEOUT_MS);
 
+    private final int hostId;
     private final InetAddress address;
     private final int port;
     private final int windowSize;
 
-    public HostInfo(InetAddress address, int port, int numHosts) {
+    public HostInfo(InetAddress address, int port, int numHosts, int hostId) {
         this.address = address;
         this.port = port;
+        this.hostId = hostId;
         this.windowSize = Link.WINDOW_SIZE / numHosts / 2;
         for (int i = 1; i <= numHosts; ++i) {
             waitingQueue.put(i, new MessageRange());
+            delivered.put(i, new MessageRange());
         }
     }
 
@@ -43,12 +42,24 @@ class HostInfo {
         return port;
     }
 
-    public long getNextSeqNumber() {
-        return sentCounter.incrementAndGet();
+    public int getHostId() {
+        return hostId;
     }
 
     public boolean canSendMessage() {
         return stubbornQueue.size() < windowSize;
+    }
+
+    public boolean isDelivered(Message m) {
+        return delivered.get(m.getOriginId()).contains(m.getMessageId());
+    }
+
+    public void markDelivered(Message m) {
+        delivered.get(m.getOriginId()).add(m.getMessageId());
+    }
+
+    public Map<Integer, MessageRange> getDelivered() {
+        return delivered;
     }
 
     public WaitingPacket getNextStubborn() {
@@ -63,12 +74,12 @@ class HostInfo {
         waitingQueue.get(message.getOriginId()).add(message.getMessageId());
     }
 
-    public void sendRange(int originId, long a, long b) {
+    public void sendRange(int originId, int a, int b) {
         waitingQueue.get(originId).setRange(a, b);
     }
 
     public int peekNextToSend(int originId) {
-        return (int) waitingQueue.get(originId).peek();
+        return waitingQueue.get(originId).peek();
     }
 
     public boolean canSendWaitingMessages() {
@@ -97,22 +108,6 @@ class HostInfo {
             return null;
         }
         return getNextWaitingMessage(index);
-    }
-
-    public boolean hasAckedPacket(long seqNumber) {
-        return vcAtDistantHost.isPast(seqNumber);
-    }
-
-    public void updateReceiveVectorClock(long messageSeqNumber) {
-        vcAtDistantHost.addMember(messageSeqNumber);
-    }
-
-    public boolean hasReceivedMessage(long seqNumber) {
-        return vcOfMessagesFromDistantHost.isPast(seqNumber);
-    }
-
-    public void updateLocalReceiveVectorClock(long messageSeqNumber) {
-        vcOfMessagesFromDistantHost.addMember(messageSeqNumber);
     }
 
     public long getTimeout() {

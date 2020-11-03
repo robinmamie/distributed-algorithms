@@ -1,7 +1,6 @@
 package cs451.link;
 
 import java.util.List;
-import java.util.function.IntConsumer;
 
 import cs451.listener.BListener;
 import cs451.message.Message;
@@ -26,7 +25,7 @@ public interface Link {
 
     void sendRange(int hostId, int originId, int mId);
 
-    static Link getLink(int port, List<Host> hosts, BListener listener, int myId, IntConsumer broadcastListener) {
-        return new PerfectLink(port, hosts, listener, myId, broadcastListener);
+    static Link getLink(int port, List<Host> hosts, BListener listener, int myId) {
+        return new PerfectLink(port, hosts, listener, myId);
     }
 }
