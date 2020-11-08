@@ -6,6 +6,7 @@ import cs451.parser.Parser;
 
 public interface Broadcast {
     void broadcast(Message m);
+
     void broadcastRange(int originId, int mId);
 
     static void prepare(boolean isFifo, Parser parser, Coordinator coordinator) {
@@ -17,8 +18,6 @@ public interface Broadcast {
     }
 
     static void flushLog() {
-        BroadcastHandler.flushLog(true);
+        BroadcastHandler.flushLog();
     }
-
-    long getLocallyLastDeliveredMessage();
 }

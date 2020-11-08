@@ -6,7 +6,7 @@ import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -17,7 +17,6 @@ import cs451.parser.Host;
 class FairLossLink extends AbstractLink {
 
     private final DatagramSocket socket;
-    private final ExecutorService executor;
     private final BlockingQueue<DatagramPacket> sendQueue = new LinkedBlockingQueue<>();
 
     public FairLossLink(int port, List<Host> hosts, BListener listener, int myId) {
@@ -28,9 +27,9 @@ class FairLossLink extends AbstractLink {
             throw new RuntimeException(e);
         }
 
-        this.executor = Executors.newFixedThreadPool(3);
+        Executor executor = Executors.newFixedThreadPool(2);
         executor.execute(this::sendPackets);
-        this.executor.execute(this::deliver);
+        executor.execute(this::deliver);
     }
 
     // *** High level packet handling, outgoing ***
@@ -61,22 +60,22 @@ class FairLossLink extends AbstractLink {
                 throw new RuntimeException("Cannot receive packets!");
             }
             Message message = Message.deserialize(packet.getData());
-            executor.execute(() -> handleListener(message));
+            handleListener(message);
         }
     }
 
-        // *** Low level packet handling **
+    // *** Low level packet handling **
 
-        private void sendPackets() {
-            try {
-                while (true) {
-                    DatagramPacket packet = sendQueue.take();
-                    socket.send(packet);
-                }
-            } catch (Exception e) {
-                throw new RuntimeException("Cannot send packets!");
+    private void sendPackets() {
+        try {
+            while (true) {
+                DatagramPacket packet = sendQueue.take();
+                socket.send(packet);
             }
+        } catch (Exception e) {
+            throw new RuntimeException("Cannot send packets!");
         }
+    }
 
     @Override
     public void sendRange(int hostId, int originId, int mId) {

@@ -5,7 +5,6 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
 
 import cs451.parser.Coordinator;
 import cs451.parser.Parser;
@@ -15,29 +14,16 @@ public class BroadcastHandler {
     private static Broadcast b;
     private static int nbMessagesToBroadcast;
 
-    private static StringBuilder output = null;
-    private static Writer writer;
-    private static final int SB_LIMIT = 100000;
-    private static final int SB_SIZE = SB_LIMIT + 100;
+    private static BufferedWriter writer;
 
     private BroadcastHandler() {
     }
 
-    static void flushLog(boolean force) {
-        if (output.length() > SB_LIMIT || force) {
-            try {
-                writer.write(output.toString());
-                writer.flush();
-            } catch (IOException e) {
-                throw new RuntimeException("Cannot write to output file.");
-            }
-        }
-        if (force) {
-            try {
-                writer.close();
-            } catch (IOException e) {
-                throw new RuntimeException("Cannot close output file.");
-            }
+    static void flushLog() {
+        try {
+            writer.close();
+        } catch (IOException e) {
+            throw new RuntimeException("Cannot close output file.");
         }
     }
 
@@ -47,23 +33,24 @@ public class BroadcastHandler {
         } catch (IOException e1) {
             throw new RuntimeException("Cannot create output file.");
         }
-        output = new StringBuilder(SB_SIZE);
         nbMessagesToBroadcast = readConfig(parser.config());
 
         if (isFifo) {
             int myPort = parser.hosts().get(parser.myId() - 1).getPort();
             b = new FIFOBroadcast(myPort, parser.hosts(), parser.myId(), m -> {
-                output
-                    .append("d ")
-                    .append(m.getOriginId())
-                    .append(" ")
-                    .append(m.getMessageId())
-                    .append(System.lineSeparator());
+                try {
+                    writer.write(String.format("d %d %d", m.getOriginId(), m.getMessageId()));
+                    writer.newLine();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }, id -> {
-                output
-                    .append("b ")
-                    .append(id)
-                    .append(System.lineSeparator());
+                try {
+                    writer.write(String.format("b %d", id));
+                    writer.newLine();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 if (id == nbMessagesToBroadcast) {
                     System.out.println("Signaling end of broadcasting messages");
                     coordinator.finishedBroadcasting();

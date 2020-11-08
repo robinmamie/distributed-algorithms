@@ -1,6 +1,8 @@
 package cs451.broadcast;
 
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import cs451.link.Link;
 import cs451.listener.BListener;
@@ -14,13 +16,22 @@ class BEBroadcast implements Broadcast {
     private final BListener deliver;
 
     private final Link link;
+    private final BlockingQueue<Message> toHandle = new LinkedBlockingQueue<>();
 
     public BEBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
         this.hosts = hosts;
         this.myId = myId;
         this.deliver = deliver;
 
-        this.link = Link.getLink(port, hosts, deliver, myId);
+        this.link = Link.getLink(port, hosts, this::deliver, myId);
+    }
+
+    private void deliver(Message message) {
+        try {
+            toHandle.put(message);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override
@@ -38,8 +49,17 @@ class BEBroadcast implements Broadcast {
         }
     }
 
-    public long getLocallyLastDeliveredMessage() {
-        return -1;
+    public void run() {
+        Message message;
+        while (true) {
+            try {
+                message = toHandle.take();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            deliver.apply(message);
+        }
     }
 
     @Override
@@ -52,5 +72,6 @@ class BEBroadcast implements Broadcast {
                 link.sendRange(host.getId(), originId, mId);
             }
         }
+        run();
     }
 }

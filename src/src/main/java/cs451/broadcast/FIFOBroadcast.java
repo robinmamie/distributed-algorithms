@@ -56,10 +56,6 @@ class FIFOBroadcast implements Broadcast {
         urBroadcast.broadcast(m);
     }
 
-    public long getLocallyLastDeliveredMessage() {
-        return delivered.get(myId).getStateOfVc();
-    }
-
     @Override
     public void broadcastRange(int originId, int mId) {
         urBroadcast.broadcastRange(originId, mId);

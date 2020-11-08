@@ -340,8 +340,8 @@ def startProcesses(processes, runscript, hostsFilePath, configFilePath, outputDi
 
 def main(processes, messages, runscript, broadcastType, logsDir, testConfig):
     # Set tc for loopback
-    #tc = TC(testConfig['TC'])
-    #print(tc)
+    tc = TC(testConfig['TC'])
+    print(tc)
 
     # Start the barrier
     initBarrier = barrier.Barrier(BARRIER_IP, BARRIER_PORT, processes)
@@ -381,7 +381,6 @@ def main(processes, messages, runscript, broadcastType, logsDir, testConfig):
         initBarrierThread.join()
         print("All processes have been initialized.")
 
-        # TODO FIXME
         #st.run()
         #print("StressTest is complete.")
 
@@ -398,7 +397,7 @@ def main(processes, messages, runscript, broadcastType, logsDir, testConfig):
         unterminated = st.remainingUnterminatedProcesses()
         if unterminated is not None:
             input('Hit `Enter` to terminate the remaining processes with logicalPIDs {}.'.format(unterminated))
-            st.terminateAllProcesses()
+        st.terminateAllProcesses()
 
         mutex = threading.Lock()
 
@@ -479,12 +478,12 @@ if __name__ == "__main__":
 
         # StressTest configuration
         'ST': {
-            'concurrency' : 8, # How many threads are interferring with the running processes
-            'attempts' : 8, # How many interferring attempts each threads does
+            'concurrency' : 50, # How many threads are interferring with the running processes
+            'attempts' : 50, # How many interferring attempts each threads does
             'attemptsDistribution' : { # Probability with which an interferring thread will
-                'STOP': 0.48,          # select an interferring action (make sure they add up to 1)
-                'CONT': 0.48,
-                'TERM':0.04
+                'STOP': 0.45,          # select an interferring action (make sure they add up to 1)
+                'CONT': 0.45,
+                'TERM': 0.10
             }
         }
     }

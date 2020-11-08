@@ -8,10 +8,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import cs451.message.Message;
-import cs451.message.MessageRange;
+import cs451.vectorclock.MessageRange;
 
 public class HostInfo {
-    public static final long TIMEOUT_MS = 800;
+    public static final long TIMEOUT_MS = 1000;
 
     private final BlockingQueue<WaitingPacket> stubbornQueue = new LinkedBlockingQueue<>();
     private final Map<Integer, MessageRange> waitingQueue = new TreeMap<>();
@@ -74,7 +74,7 @@ public class HostInfo {
     }
 
     public void addMessageInWaitingList(Message message) {
-        waitingQueue.get(message.getOriginId()).addSync(message.getMessageId());
+        waitingQueue.get(message.getOriginId()).add(message.getMessageId());
     }
 
     public void sendRange(int originId, int a, int b) {

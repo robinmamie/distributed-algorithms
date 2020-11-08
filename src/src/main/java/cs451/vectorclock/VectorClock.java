@@ -1,11 +1,9 @@
 package cs451.vectorclock;
 
-import cs451.message.MessageRange;
-
 public class VectorClock {
 
     private final MessageRange range = new MessageRange();
-    
+
     public VectorClock() {
         range.add(0);
     }

@@ -52,8 +52,8 @@ public class Main {
 
         Coordinator coordinator = new Coordinator(parser.myId(), parser.barrierIp(), parser.barrierPort(),
                 parser.signalIp(), parser.signalPort());
+
         final boolean fifo = true;
-        // final boolean lcausal = false;
 
         Broadcast.prepare(fifo, parser, coordinator);
 
@@ -62,6 +62,7 @@ public class Main {
 
         System.out.println("Broadcasting messages...");
 
+        // Handle the entire FIFO-broadcast
         Broadcast.handle(fifo, parser);
 
         while (true) {

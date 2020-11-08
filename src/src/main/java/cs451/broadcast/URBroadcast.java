@@ -56,10 +56,6 @@ class URBroadcast implements Broadcast {
         beBroadcast.broadcast(m);
     }
 
-    public long getLocallyLastDeliveredMessage() {
-        return delivered.get(myId).getStateOfVc();
-    }
-
     @Override
     public void broadcastRange(int originId, int mId) {
         beBroadcast.broadcastRange(originId, mId);

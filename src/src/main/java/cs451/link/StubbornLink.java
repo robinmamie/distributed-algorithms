@@ -39,7 +39,6 @@ class StubbornLink extends AbstractLink {
     private void stubbornSend() {
         while (true) {
             getHostInfo().forEach(this::checkNextPacketToConfirm);
-            getHostInfo().forEach(this::emptyWaitingQueue);
         }
     }
 
@@ -55,6 +54,7 @@ class StubbornLink extends AbstractLink {
                 Thread.currentThread().interrupt();
             }
         }
+        emptyWaitingQueue(hostId, host);
     }
 
     private void emptyWaitingQueue(int hostId, HostInfo host) {
