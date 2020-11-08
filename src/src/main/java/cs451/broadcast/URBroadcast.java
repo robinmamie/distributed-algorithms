@@ -11,53 +11,88 @@ import cs451.parser.Host;
 import cs451.vectorclock.BroadcastAcks;
 import cs451.vectorclock.VectorClock;
 
+/**
+ * Uniform reliable broadcast abstraction. Delivers messages once it is sure
+ * that more than half of all hosts have BEB-delivered the message.
+ */
 class URBroadcast implements Broadcast {
 
+    /**
+     * Underlying best effort broadcast.
+     */
     private final BEBroadcast beBroadcast;
 
+    /**
+     * Tally of already URB-delivered messages.
+     */
     private final Map<Integer, VectorClock> delivered = new HashMap<>();
+
+    /**
+     * Registers which hosts have BEB-delivered which messages.
+     */
     private final BroadcastAcks acks;
 
+    /**
+     * Listener from the upper instance called when a message is effectively
+     * UR-broadcast delivered.
+     */
     private final BListener deliver;
-    private final int threshold;
-    private final int myId;
 
+    /**
+     * Half of the number of hosts. Used to check if a message can be UR-broadcast.
+     */
+    private final int threshold;
+
+    /**
+     * Create a URB broadcast instance.
+     *
+     * @param port    port number, used to build the underlying link.
+     * @param hosts   list of hosts, used to broadcast messages.
+     * @param myId    id of the local host.
+     * @param deliver listener used when a message is delivered.
+     */
     public URBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
         this.beBroadcast = new BEBroadcast(port, hosts, myId, this::deliver);
         this.acks = new BroadcastAcks(hosts.size(), myId, AbstractLink.getHostInfo());
         this.deliver = deliver;
         this.threshold = hosts.size() / 2;
-        this.myId = myId;
 
         for (Host host : hosts) {
             delivered.put(host.getId(), new VectorClock());
         }
     }
 
-    private void deliver(Message m) {
-        int origin = m.getOriginId();
-        int mId = m.getMessageId();
-        if (!delivered.get(origin).isPast(mId)) {
-            if (!acks.wasAlreadyBroadcast(m)) {
-                acks.add(m);
-                broadcast(m.changeLastHop(myId));
-                return;
-            }
-            int count = acks.ackCount(m);
-            if (count > threshold) {
-                delivered.get(origin).addMember(mId);
-                deliver.apply(m);
+    /**
+     * Called when a message is BEB-delivered.
+     *
+     * @param message the message to deliver.
+     */
+    private void deliver(Message message) {
+        int origin = message.getOriginId();
+        int messageId = message.getMessageId();
+        if (!delivered.get(origin).isPast(messageId)) {
+            // If not already delivered, broadcast new message, or check if number of
+            // acknowledgements is good to deliver said message.
+            if (!acks.wasAlreadyBroadcast(message)) {
+                acks.add(message);
+                broadcast(message);
+            } else {
+                int count = acks.ackCount(message);
+                if (count > threshold) {
+                    delivered.get(origin).addMember(messageId);
+                    deliver.apply(message);
+                }
             }
         }
     }
 
     @Override
-    public void broadcast(Message m) {
-        beBroadcast.broadcast(m);
+    public void broadcast(Message message) {
+        beBroadcast.broadcast(message);
     }
 
     @Override
-    public void broadcastRange(int originId, int mId) {
-        beBroadcast.broadcastRange(originId, mId);
+    public void broadcastRange(int numberOfMessages) {
+        beBroadcast.broadcastRange(numberOfMessages);
     }
 }

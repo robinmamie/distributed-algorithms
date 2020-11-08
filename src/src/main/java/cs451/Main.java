@@ -1,6 +1,6 @@
 package cs451;
 
-import cs451.broadcast.Broadcast;
+import cs451.broadcast.BroadcastHandler;
 import cs451.parser.Coordinator;
 import cs451.parser.Host;
 import cs451.parser.Parser;
@@ -12,7 +12,7 @@ public class Main {
         System.out.println("Immediately stopping network packet processing.");
 
         // write/flush output file if necessary
-        Broadcast.flushLog();
+        BroadcastHandler.flushLog();
         System.out.println("Writing output.");
     }
 
@@ -55,7 +55,7 @@ public class Main {
 
         final boolean fifo = true;
 
-        Broadcast.prepare(fifo, parser, coordinator);
+        BroadcastHandler.create(fifo, parser, coordinator);
 
         System.out.println("Waiting for all processes for finish initialization");
         coordinator.waitOnBarrier();
@@ -63,11 +63,11 @@ public class Main {
         System.out.println("Broadcasting messages...");
 
         // Handle the entire FIFO-broadcast
-        Broadcast.handle(fifo, parser);
+        BroadcastHandler.start(fifo);
 
         while (true) {
             // Sleep for 1 hour
-            Thread.sleep(60 * 60 * 1000);
+            Thread.sleep(60L * 60 * 1000);
         }
     }
 }

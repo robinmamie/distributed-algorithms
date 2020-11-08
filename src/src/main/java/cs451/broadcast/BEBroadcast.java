@@ -9,23 +9,60 @@ import cs451.listener.BListener;
 import cs451.message.Message;
 import cs451.parser.Host;
 
+/**
+ * Best effort broadcast abstraction.
+ */
 class BEBroadcast implements Broadcast {
 
+    /**
+     * List of hosts, used during the broadcast phase
+     */
     private final List<Host> hosts;
+
+    /**
+     * Id of the local host, to deliver the message directly instead of sending it
+     * to itself.
+     */
     private final int myId;
+
+    /**
+     * Listener used by the "upper" echelon (either URB broadcast, or directly the
+     * user).
+     */
     private final BListener deliver;
 
+    /**
+     * Link used to send the messages (in the case of this project: PerfectLink).
+     */
     private final Link link;
+
+    /**
+     * Waiting queue of messages delivered by the link layer.
+     */
     private final BlockingQueue<Message> toHandle = new LinkedBlockingQueue<>();
 
+    /**
+     * Builds a best effort broadcaster.
+     *
+     * @param port    port number, used to build the underlying link.
+     * @param hosts   list of hosts, used to broadcast messages.
+     * @param myId    id of the local host, to avoid sending the message locally via
+     *                the network.
+     * @param deliver listener used when a message is delivered.
+     */
     public BEBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
         this.hosts = hosts;
         this.myId = myId;
         this.deliver = deliver;
-
         this.link = Link.getLink(port, hosts, this::deliver, myId);
     }
 
+    /**
+     * Used by the underlying link to deliver the message. Serves as a buffer to the
+     * thread working in the broadcast layer.
+     *
+     * @param message message to be delivered
+     */
     private void deliver(Message message) {
         try {
             toHandle.put(message);
@@ -35,20 +72,24 @@ class BEBroadcast implements Broadcast {
     }
 
     @Override
-    public void broadcast(Message m) {
-        // Message from distant host already acked, so no need to resend the message
-        int sentFrom = m.getLastHop();
+    public void broadcast(Message message) {
+        // Do not send message to where it originated from: unnecessary.
+        int sentFrom = message.getLastHop();
         for (Host host : hosts) {
             if (host.getId() != sentFrom || sentFrom == myId) {
                 if (myId != host.getId()) {
-                    link.send(m, host.getId());
+                    link.send(message, host.getId());
                 } else {
-                    deliver.apply(m);
+                    deliver.apply(message);
                 }
             }
         }
     }
 
+    /**
+     * Empties the deliver-buffer when it can, by calling the listener of the upper
+     * instance.
+     */
     public void run() {
         Message message;
         while (true) {
@@ -63,13 +104,10 @@ class BEBroadcast implements Broadcast {
     }
 
     @Override
-    public void broadcastRange(int originId, int mId) {
-        if (originId != myId) {
-            throw new RuntimeException("Message ranges can only be broadcast from origin!");
-        }
+    public void broadcastRange(int numberOfMessages) {
         for (Host host : hosts) {
             if (myId != host.getId()) {
-                link.sendRange(host.getId(), originId, mId);
+                link.sendRange(host.getId(), myId, numberOfMessages);
             }
         }
         run();

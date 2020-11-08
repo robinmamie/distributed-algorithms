@@ -1,23 +1,25 @@
 package cs451.broadcast;
 
 import cs451.message.Message;
-import cs451.parser.Coordinator;
-import cs451.parser.Parser;
 
-public interface Broadcast {
-    void broadcast(Message m);
+/**
+ * Defines the global Broadcast instance, i.e. what the main part of the program
+ * can see.
+ */
+interface Broadcast {
 
-    void broadcastRange(int originId, int mId);
+    /**
+     * Broadcast a single message.
+     *
+     * @param m the message to be broadcast.
+     */
+    void broadcast(Message message);
 
-    static void prepare(boolean isFifo, Parser parser, Coordinator coordinator) {
-        BroadcastHandler.create(isFifo, parser, coordinator);
-    }
-
-    static void handle(boolean isFifo, Parser parser) {
-        BroadcastHandler.start(isFifo, parser);
-    }
-
-    static void flushLog() {
-        BroadcastHandler.flushLog();
-    }
+    /**
+     * Broadcast an entire range of messages at once.
+     *
+     * @param numberOfMessages number of messages to be broadcast: effectively put
+     *                         message 1 to numberOfMessages in a buffer.
+     */
+    void broadcastRange(int numberOfMessages);
 }

@@ -9,17 +9,33 @@ import java.io.IOException;
 import cs451.parser.Coordinator;
 import cs451.parser.Parser;
 
+/**
+ * Concrete broadcast handler doing all the initial work.
+ */
 public class BroadcastHandler {
 
+    /**
+     * The main broadcaster to be used (either FIFO or LCausal).
+     */
     private static Broadcast b;
+
+    /**
+     * Number of messages to be broadcast.
+     */
     private static int nbMessagesToBroadcast;
 
+    /**
+     * Buffered writer used to write the required information to disk.
+     */
     private static BufferedWriter writer;
 
     private BroadcastHandler() {
     }
 
-    static void flushLog() {
+    /**
+     * Flush the log (to be used at the end of the program's lifetime).
+     */
+    public static void flushLog() {
         try {
             writer.close();
         } catch (IOException e) {
@@ -27,15 +43,22 @@ public class BroadcastHandler {
         }
     }
 
-    static void create(boolean isFifo, Parser parser, Coordinator coordinator) {
+    /**
+     * Prepare the broadcasters and links, to be done before accessing the barrier.
+     *
+     * @param isFifo      whether the broadcast is FIFO or LCausal.
+     * @param parser      the original parser of the program.
+     * @param coordinator the original coordinator of the program.
+     */
+    public static void create(boolean isFifo, Parser parser, Coordinator coordinator) {
         try {
             writer = new BufferedWriter(new FileWriter(parser.output()));
         } catch (IOException e1) {
             throw new RuntimeException("Cannot create output file.");
         }
-        nbMessagesToBroadcast = readConfig(parser.config());
 
         if (isFifo) {
+            nbMessagesToBroadcast = readFifoConfig(parser.config());
             int myPort = parser.hosts().get(parser.myId() - 1).getPort();
             b = new FIFOBroadcast(myPort, parser.hosts(), parser.myId(), m -> {
                 try {
@@ -61,29 +84,45 @@ public class BroadcastHandler {
         }
     }
 
-    static void start(boolean isFifo, Parser parser) {
+    /**
+     * Start broadcasting messages.
+     *
+     * @param isFifo whether the broadcast is FIFO or LCausal.
+     */
+    public static void start(boolean isFifo) {
         if (isFifo) {
-            startFifo(parser);
+            startFifo();
         } else {
-            startLCausal(parser);
+            startLCausal();
         }
     }
 
-    private static void startFifo(Parser parser) {
-        b.broadcastRange(parser.myId(), nbMessagesToBroadcast);
+    /**
+     * Start FIFO-broadcasting messages.
+     */
+    private static void startFifo() {
+        b.broadcastRange(nbMessagesToBroadcast);
     }
 
-    private static void startLCausal(Parser parser) {
+    /**
+     * Start LCausal-broadcasting messages.
+     */
+    private static void startLCausal() {
         throw new RuntimeException("LCausal-Broadcast not implemented!");
     }
 
-    private static int readConfig(String path) {
-        try (BufferedReader br = new BufferedReader(new FileReader(path))) {
-            String line = br.readLine();
+    /**
+     * Read the number of messages to be broadcast from the FIFO config file.
+     *
+     * @param path the path to the config file.
+     * @return the number of messages to be broadcast.
+     */
+    private static int readFifoConfig(String path) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
+            String line = reader.readLine();
             return Integer.parseInt(line);
         } catch (IOException e) {
-            System.err.println("Problem with the config file!");
-            return 0;
+            throw new RuntimeException("Problem with the config file!");
         }
     }
 }
