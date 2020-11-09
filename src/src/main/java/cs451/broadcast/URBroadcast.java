@@ -80,7 +80,7 @@ class URBroadcast implements Broadcast {
     private void deliver(Message message) {
         int origin = message.getOriginId();
         int messageId = message.getMessageId();
-        if (!delivered.get(origin).isPast(messageId)) {
+        if (!delivered.get(origin).contains(messageId)) {
             // If not already delivered, broadcast new message, or check if number of
             // acknowledgements is good to deliver said message.
             if (!acks.wasAlreadyBroadcast(message)) {
