@@ -32,7 +32,7 @@ class StubbornLink extends AbstractLink {
 
         // Create a threads whose sole job is to empty waiting queues and check if
         // messages were acked.
-        ExecutorService executor = Executors.newFixedThreadPool(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
         executor.execute(this::stubbornSend);
     }
 
@@ -108,14 +108,15 @@ class StubbornLink extends AbstractLink {
     private void emptyWaitingQueue(int hostId, HostInfo host) {
         while (host.canSendWaitingMessages()) {
             Message m = host.getNextWaitingMessage();
-            if (m != null) {
-                fLink.send(m, hostId);
-                WaitingPacket wpa = new WaitingPacket(m, host);
-                try {
-                    host.addPacketToConfirm(wpa);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+            if (m == null) {
+                return;
+            }
+            fLink.send(m, hostId);
+            WaitingPacket wpa = new WaitingPacket(m, host);
+            try {
+                host.addPacketToConfirm(wpa);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         }
     }

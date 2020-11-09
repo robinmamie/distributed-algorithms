@@ -91,8 +91,14 @@ class URBroadcast implements Broadcast {
                 if (count > threshold) {
                     delivered.get(origin).addMember(messageId);
                     deliver.apply(message);
+                    if (start == 0) {
+                        start = System.nanoTime();
+                    }
+                    System.err.println(System.nanoTime() - start);
                 }
             }
         }
     }
+
+    private long start = 0;
 }

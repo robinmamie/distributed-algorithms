@@ -53,8 +53,7 @@ public abstract class AbstractLink implements Link {
                 if (i != getMyId()) {
                     HostInfo hostI;
                     try {
-                        hostI = new HostInfo(InetAddress.getByName(host.getIp()), host.getPort(), hosts.size(),
-                                host.getId());
+                        hostI = new HostInfo(InetAddress.getByName(host.getIp()), host.getPort(), hosts.size());
                     } catch (UnknownHostException e) {
                         throw new RuntimeException("Invalid IP address given!");
                     }
@@ -94,7 +93,7 @@ public abstract class AbstractLink implements Link {
 
     /**
      * Statically get all host info saved by this network.
-     * 
+     *
      * @return All instances of host information of this network.
      */
     public static Map<Integer, HostInfo> getHostInfo() {
