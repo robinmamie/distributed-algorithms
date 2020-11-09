@@ -11,12 +11,11 @@ import cs451.message.Message;
 import cs451.vectorclock.MessageRange;
 
 public class HostInfo {
-    public static final long TIMEOUT_MS = 1000;
 
     private final BlockingQueue<WaitingPacket> stubbornQueue = new LinkedBlockingQueue<>();
     private final Map<Integer, MessageRange> waitingQueue = new TreeMap<>();
     private final Map<Integer, MessageRange> delivered = new TreeMap<>();
-    private final AtomicLong currentTimeout = new AtomicLong(TIMEOUT_MS);
+    private final AtomicLong currentTimeout = new AtomicLong(Link.TIMEOUT_MS);
 
     private final int hostId;
     private final InetAddress address;
@@ -105,11 +104,11 @@ public class HostInfo {
     }
 
     public void resetTimeout() {
-        currentTimeout.set(TIMEOUT_MS);
+        currentTimeout.set(Link.TIMEOUT_MS);
     }
 
     public void testAndDouble(long messageTimeout) {
-        if (currentTimeout.get() < TIMEOUT_MS * 16) {
+        if (currentTimeout.get() < Link.TIMEOUT_MS * 16) {
             currentTimeout.compareAndSet(messageTimeout, messageTimeout * 2);
         }
     }

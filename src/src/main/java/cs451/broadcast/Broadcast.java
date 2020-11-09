@@ -11,15 +11,15 @@ interface Broadcast {
     /**
      * Broadcast a single message.
      *
-     * @param m the message to be broadcast.
+     * @param message The message to be broadcast.
      */
     void broadcast(Message message);
 
     /**
      * Broadcast an entire range of messages at once.
      *
-     * @param numberOfMessages number of messages to be broadcast: effectively put
-     *                         message 1 to numberOfMessages in a buffer.
+     * @param numberOfMessages The number of messages to be broadcast: effectively
+     *                         put message 1 to numberOfMessages in a buffer.
      */
     void broadcastRange(int numberOfMessages);
 }

@@ -15,40 +15,41 @@ import cs451.parser.Host;
 class BEBroadcast implements Broadcast {
 
     /**
-     * List of hosts, used during the broadcast phase
+     * The list of hosts, used during the broadcast phase
      */
     private final List<Host> hosts;
 
     /**
-     * Id of the local host, to deliver the message directly instead of sending it
-     * to itself.
+     * The ID of the local host, to deliver the message directly instead of sending
+     * it to itself.
      */
     private final int myId;
 
     /**
-     * Listener used by the "upper" echelon (either URB broadcast, or directly the
-     * user).
+     * The listener used by the "upper" echelon (either URB broadcast, or directly
+     * the user).
      */
     private final BListener deliver;
 
     /**
-     * Link used to send the messages (in the case of this project: PerfectLink).
+     * The link used to send the messages (in the case of this project:
+     * PerfectLink).
      */
     private final Link link;
 
     /**
-     * Waiting queue of messages delivered by the link layer.
+     * The waiting queue of messages delivered by the link layer.
      */
     private final BlockingQueue<Message> toHandle = new LinkedBlockingQueue<>();
 
     /**
      * Builds a best effort broadcaster.
      *
-     * @param port    port number, used to build the underlying link.
-     * @param hosts   list of hosts, used to broadcast messages.
-     * @param myId    id of the local host, to avoid sending the message locally via
-     *                the network.
-     * @param deliver listener used when a message is delivered.
+     * @param port    The port number, used to build the underlying link.
+     * @param hosts   The list of hosts, used to broadcast messages.
+     * @param myId    The ID of the local host, to avoid sending the message locally
+     *                via the network.
+     * @param deliver The listener used when a message is delivered.
      */
     public BEBroadcast(int port, List<Host> hosts, int myId, BListener deliver) {
         this.hosts = hosts;
@@ -61,7 +62,7 @@ class BEBroadcast implements Broadcast {
      * Used by the underlying link to deliver the message. Serves as a buffer to the
      * thread working in the broadcast layer.
      *
-     * @param message message to be delivered
+     * @param message The message to be delivered
      */
     private void deliver(Message message) {
         try {
@@ -86,6 +87,16 @@ class BEBroadcast implements Broadcast {
         }
     }
 
+    @Override
+    public void broadcastRange(int numberOfMessages) {
+        for (Host host : hosts) {
+            if (myId != host.getId()) {
+                link.sendRange(host.getId(), myId, numberOfMessages);
+            }
+        }
+        run();
+    }
+
     /**
      * Empties the deliver-buffer when it can, by calling the listener of the upper
      * instance.
@@ -101,15 +112,5 @@ class BEBroadcast implements Broadcast {
             }
             deliver.apply(message);
         }
-    }
-
-    @Override
-    public void broadcastRange(int numberOfMessages) {
-        for (Host host : hosts) {
-            if (myId != host.getId()) {
-                link.sendRange(host.getId(), myId, numberOfMessages);
-            }
-        }
-        run();
     }
 }

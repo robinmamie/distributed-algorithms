@@ -14,11 +14,30 @@ import cs451.listener.BListener;
 import cs451.message.Message;
 import cs451.parser.Host;
 
+/**
+ * Fair-loss link abstraction.
+ */
 class FairLossLink extends AbstractLink {
 
+    /**
+     * The UDP socket.
+     */
     private final DatagramSocket socket;
+
+    /**
+     * The sending queue, which avoids concurrency on the sending part of the
+     * socket.
+     */
     private final BlockingQueue<DatagramPacket> sendQueue = new LinkedBlockingQueue<>();
 
+    /**
+     * Create a fair-loss link.
+     *
+     * @param port     The port number of the socket.
+     * @param hosts    The complete list of hosts of the network.
+     * @param listener The listener to call once a message is delivered.
+     * @param myId     The ID of the local host.
+     */
     public FairLossLink(int port, List<Host> hosts, BListener listener, int myId) {
         super(listener, myId, hosts);
         try {
@@ -27,12 +46,12 @@ class FairLossLink extends AbstractLink {
             throw new RuntimeException(e);
         }
 
+        // Create 2 threads: one for sending packets, another to deliver incoming
+        // packets.
         Executor executor = Executors.newFixedThreadPool(2);
         executor.execute(this::sendPackets);
         executor.execute(this::deliver);
     }
-
-    // *** High level packet handling, outgoing ***
 
     @Override
     public void send(Message message, int hostId) {
@@ -46,8 +65,15 @@ class FairLossLink extends AbstractLink {
         }
     }
 
-    // *** High level packet handling, incoming ***
+    @Override
+    public void sendRange(int hostId, int originId, int messageId) {
+        // This function is not designed for this level of Link.
+        throw new RuntimeException();
+    }
 
+    /**
+     * Receive, de-serialize and deliver incoming packets (to the next layer).
+     */
     private void deliver() {
         DatagramPacket packet;
         byte[] buf;
@@ -64,8 +90,10 @@ class FairLossLink extends AbstractLink {
         }
     }
 
-    // *** Low level packet handling **
-
+    /**
+     * Low level packet sending: takes from the queue and uses the socket, to avoid
+     * any concurrency problem.
+     */
     private void sendPackets() {
         try {
             while (true) {
@@ -75,10 +103,5 @@ class FairLossLink extends AbstractLink {
         } catch (Exception e) {
             throw new RuntimeException("Cannot send packets!");
         }
-    }
-
-    @Override
-    public void sendRange(int hostId, int originId, int mId) {
-        throw new RuntimeException();
     }
 }
