@@ -15,15 +15,52 @@ import cs451.vectorclock.MessageRange;
  */
 public class HostInfo {
 
+    /**
+     * The "stubborn" queue, i.e. messages sent to this host that have not been
+     * acked yet.
+     */
     private final BlockingQueue<WaitingPacket> stubbornQueue = new LinkedBlockingQueue<>();
+
+    /**
+     * The queue of waiting messages, to be emptied once the stubborn queue is small
+     * enough, i.e. smaller than the window size.
+     */
     private final Map<Integer, MessageRange> waitingQueue = new TreeMap<>();
+
+    /**
+     * The messages already delivered from this host, i.e. messages that had this
+     * host as last hop.
+     */
     private final Map<Integer, MessageRange> delivered = new TreeMap<>();
+
+    /**
+     * The current timeout of this host.
+     */
     private final AtomicLong currentTimeout = new AtomicLong(Link.TIMEOUT_MS);
 
+    /**
+     * The address of this host.
+     */
     private final InetAddress address;
+
+    /**
+     * The port number of this host.
+     */
     private final int port;
+
+    /**
+     * The amount of messages that can be sent to this host
+     */
     private final int windowSize;
+
+    /**
+     * The total number of hosts in the topology.
+     */
     private final int numHosts;
+
+    /**
+     * The origin ID cycle, used to retrieve the next waiting message.
+     */
     private int nextOriginToSend = 1;
 
     /**
@@ -38,6 +75,7 @@ public class HostInfo {
     public HostInfo(InetAddress address, int port, int numHosts) {
         this.address = address;
         this.port = port;
+        // We divide the window by 2 to take acks into account.
         this.windowSize = Link.WINDOW_SIZE / numHosts / 2;
         this.numHosts = numHosts;
         for (int i = 1; i <= numHosts; ++i) {
@@ -134,10 +172,22 @@ public class HostInfo {
         waitingQueue.get(originId).setRange(a, b);
     }
 
+    /**
+     * Check whether we can send a new message, i.e. if the size of the "stubborn"
+     * queues (messages not yet acked) is less than the window size.
+     *
+     * @return Whether we can send a new message.
+     */
     public boolean canSendWaitingMessages() {
         return stubbornQueue.size() < windowSize;
     }
 
+    /**
+     * Retrieve the next waiting message from the waiting queue. Origins are chosen
+     * cyclically.
+     *
+     * @return A new message to "stubborn" send.
+     */
     public Message getNextWaitingMessage() {
         int nextHost = nextOriginToSend;
         if (nextOriginToSend == numHosts) {
@@ -150,14 +200,29 @@ public class HostInfo {
         return mId < 0 ? null : Message.createMessage(nextHost, mId);
     }
 
+    /**
+     * Get the current timeout of the host, in milliseconds.
+     *
+     * @return The current timeout, in milliseconds.
+     */
     public long getTimeout() {
         return currentTimeout.get();
     }
 
+    /**
+     * Reset the value of this host's timeout to the baseline.
+     */
     public void resetTimeout() {
         currentTimeout.set(Link.TIMEOUT_MS);
     }
 
+    /**
+     * Test the timeout of this current hosts, and if it checks out and is not equal
+     * or greater than 16 times the baseline value, double it.
+     *
+     * @param messageTimeout The supposed current timeout. It will only double if
+     *                       this value and the saved timeout match up.
+     */
     public void testAndDouble(long messageTimeout) {
         if (currentTimeout.get() < Link.TIMEOUT_MS * 16) {
             currentTimeout.compareAndSet(messageTimeout, messageTimeout * 2);

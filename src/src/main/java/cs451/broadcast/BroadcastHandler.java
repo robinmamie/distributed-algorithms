@@ -105,11 +105,6 @@ public class BroadcastHandler {
         if (messageId == nbMessagesToBroadcast) {
             System.out.println("Signaling end of broadcasting messages");
             coordinator.finishedBroadcasting();
-            try {
-                writer.flush();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
     }
 
