@@ -193,14 +193,20 @@ public class HostInfo {
      * @return A new message to "stubborn" send.
      */
     public Message getNextWaitingMessage() {
-        int nextHost = nextOriginToSend;
-        if (nextOriginToSend == numHosts) {
-            nextOriginToSend = 1;
-        } else {
-            nextOriginToSend += 1;
+        int nextHost = 1;
+        int mId = Integer.MIN_VALUE;
+        for (int i = 1; i <= numHosts; ++i) {
+            nextHost = nextOriginToSend;
+            if (nextOriginToSend == numHosts) {
+                nextOriginToSend = 1;
+            } else {
+                nextOriginToSend += 1;
+            }
+            mId = waitingQueue.get(nextHost).poll();
+            if (0 < mId) {
+                break;
+            }
         }
-
-        int mId = waitingQueue.get(nextHost).poll();
         return mId < 0 ? null : Message.createMessage(nextHost, mId);
     }
 

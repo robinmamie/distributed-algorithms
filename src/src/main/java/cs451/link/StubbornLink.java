@@ -19,12 +19,6 @@ class StubbornLink extends AbstractLink {
     private final FairLossLink fLink;
 
     /**
-     * The executor service handling thread emptying waiting queues and checking
-     * packets have to be resent.
-     */
-    private final ExecutorService executor;
-
-    /**
      * Create a stubborn link.
      *
      * @param port     The port number of the socket.
@@ -38,8 +32,8 @@ class StubbornLink extends AbstractLink {
 
         // Create threads whose sole job is to empty waiting queues and check if
         // messages were acked.
-        this.executor = Executors.newFixedThreadPool(2);
-        this.executor.execute(this::stubbornSend);
+        ExecutorService executor = Executors.newFixedThreadPool(1);
+        executor.execute(this::stubbornSend);
     }
 
     @Override
@@ -70,8 +64,6 @@ class StubbornLink extends AbstractLink {
             fLink.send(message.toAck(getMyId()), hostId);
         }
 
-        executor.execute(() -> checkNextPacketToConfirm(hostId, hostInfo));
-
         // An ack gives us valuable information. We treat them as if they were messages
         // in themselves.
         handleListener(message);
@@ -84,12 +76,6 @@ class StubbornLink extends AbstractLink {
     private void stubbornSend() {
         while (true) {
             getHostInfo().forEach(this::checkNextPacketToConfirm);
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
-            }
         }
     }
 

@@ -20,7 +20,7 @@ public interface Link {
     /**
      * The base timeout value for lost messages, in milliseconds.
      */
-    public static final long TIMEOUT_MS = 750;
+    public static final long TIMEOUT_MS = 550;
 
     /**
      * Send a message through a link.
