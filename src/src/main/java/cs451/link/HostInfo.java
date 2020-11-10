@@ -1,6 +1,8 @@
 package cs451.link;
 
 import java.net.InetAddress;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
@@ -19,7 +21,7 @@ public class HostInfo {
      * The "stubborn" queue, i.e. messages sent to this host that have not been
      * acked yet.
      */
-    private final BlockingQueue<WaitingPacket> stubbornQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<WaitingPacket> stubbornQueue = new LinkedBlockingQueue<>(Link.WINDOW_SIZE);
 
     /**
      * The queue of waiting messages, to be emptied once the stubborn queue is small
@@ -132,12 +134,14 @@ public class HostInfo {
     }
 
     /**
-     * Get the next "stubborn" (not acked) message.
+     * Get the next "stubborn" (not acked) messages.
      *
-     * @return The next stubborn message.
+     * @return The list of next stubborn messages.
      */
-    public WaitingPacket getNextStubborn() {
-        return stubbornQueue.poll();
+    public List<WaitingPacket> getNextStubbornPackets() {
+        List<WaitingPacket> stubbornPackets = new LinkedList<>();
+        stubbornQueue.drainTo(stubbornPackets);
+        return stubbornPackets;
     }
 
     /**

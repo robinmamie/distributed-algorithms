@@ -19,6 +19,12 @@ class StubbornLink extends AbstractLink {
     private final FairLossLink fLink;
 
     /**
+     * The executor service handling thread emptying waiting queues and checking
+     * packets have to be resent.
+     */
+    private final ExecutorService executor;
+
+    /**
      * Create a stubborn link.
      *
      * @param port     The port number of the socket.
@@ -30,10 +36,10 @@ class StubbornLink extends AbstractLink {
         super(listener, myId, hosts);
         this.fLink = new FairLossLink(port, hosts, this::deliver, myId);
 
-        // Create a threads whose sole job is to empty waiting queues and check if
+        // Create threads whose sole job is to empty waiting queues and check if
         // messages were acked.
-        ExecutorService executor = Executors.newFixedThreadPool(1);
-        executor.execute(this::stubbornSend);
+        this.executor = Executors.newFixedThreadPool(2);
+        this.executor.execute(this::stubbornSend);
     }
 
     @Override
@@ -56,12 +62,15 @@ class StubbornLink extends AbstractLink {
      */
     private void deliver(Message message) {
         int hostId = message.getLastHop();
+        HostInfo hostInfo = getHostInfo(hostId);
         // Reset the timeout, as we got an answer from the distant host.
-        getHostInfo(hostId).resetTimeout();
+        hostInfo.resetTimeout();
 
         if (!message.isAck()) {
             fLink.send(message.toAck(getMyId()), hostId);
         }
+
+        executor.execute(() -> checkNextPacketToConfirm(hostId, hostInfo));
 
         // An ack gives us valuable information. We treat them as if they were messages
         // in themselves.
@@ -75,6 +84,12 @@ class StubbornLink extends AbstractLink {
     private void stubbornSend() {
         while (true) {
             getHostInfo().forEach(this::checkNextPacketToConfirm);
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
         }
     }
 
@@ -86,13 +101,15 @@ class StubbornLink extends AbstractLink {
      * @param host   The network information related to the host.
      */
     private void checkNextPacketToConfirm(int hostId, HostInfo host) {
-        final WaitingPacket wp = host.getNextStubborn();
-        if (wp != null && !host.isDelivered(wp.getMessage())) {
-            try {
-                WaitingPacket newWp = wp.resendIfTimedOut(() -> fLink.send(wp.getMessage(), hostId));
-                host.addPacketToConfirm(newWp);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+        List<WaitingPacket> wps = host.getNextStubbornPackets();
+        for (WaitingPacket wp : wps) {
+            if (!host.isDelivered(wp.getMessage())) {
+                try {
+                    WaitingPacket newWp = wp.resendIfTimedOut(() -> fLink.send(wp.getMessage(), hostId));
+                    host.addPacketToConfirm(newWp);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
         emptyWaitingQueue(hostId, host);

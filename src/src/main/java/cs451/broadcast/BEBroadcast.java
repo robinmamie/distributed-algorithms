@@ -40,7 +40,7 @@ class BEBroadcast implements Broadcast {
     /**
      * The waiting queue of messages delivered by the link layer.
      */
-    private final BlockingQueue<Message> toHandle = new LinkedBlockingQueue<>();
+    private final BlockingQueue<Message> toHandle = new LinkedBlockingQueue<>(Link.WINDOW_SIZE);
 
     /**
      * Builds a best effort broadcaster.

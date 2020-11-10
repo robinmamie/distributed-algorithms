@@ -91,6 +91,7 @@ class URBroadcast implements Broadcast {
                 if (count > threshold) {
                     delivered.get(origin).addMember(messageId);
                     deliver.apply(message);
+                    // TODO to delete
                     if (start == 0) {
                         start = System.nanoTime();
                     }

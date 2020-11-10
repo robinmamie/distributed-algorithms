@@ -28,7 +28,7 @@ class FairLossLink extends AbstractLink {
      * The sending queue, which avoids concurrency on the sending part of the
      * socket.
      */
-    private final BlockingQueue<DatagramPacket> sendQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<DatagramPacket> sendQueue = new LinkedBlockingQueue<>(Link.WINDOW_SIZE);
 
     /**
      * Create a fair-loss link.
