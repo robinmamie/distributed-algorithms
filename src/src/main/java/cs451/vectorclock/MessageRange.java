@@ -27,12 +27,66 @@ public class MessageRange {
     /**
      * Set a range as the initial value (used to broadcast/save the local messages).
      *
-     * @param a
-     * @param b
+     * @param a The lower bound of the range.
+     * @param b The upper bound of the range.
      */
     public void setRange(int a, int b) {
         synchronized (lock) {
             ranges = new Range(a, b);
+        }
+    }
+
+    /**
+     * Add a range to the MessageRange. Merges and overrides ranges to keep the
+     * contents logical.
+     *
+     * @param a The lower bound of the new range.
+     * @param b The upper bound of the new range.
+     */
+    public void addRange(int a, int b) {
+        synchronized (lock) {
+            Range previous = null;
+            Range current = ranges;
+            int lowerBound = EMPTY;
+
+            while (current != null) {
+                if (lowerBound == EMPTY) {
+                    if (a < current.getStart()) {
+                        lowerBound = a;
+                    } else if (current.contains(a) || a == current.getEnd() + 1) {
+                        lowerBound = current.getStart();
+                    }
+                }
+
+                if (lowerBound != EMPTY) {
+                    Range newRange = null;
+                    if (current.contains(b) || current.getStart() - 1 == b) {
+                        newRange = new Range(lowerBound, current.getEnd(), current.next());
+                    } else if (b < current.getStart()) {
+                        newRange = new Range(lowerBound, b, current);
+                    }
+                    if (newRange != null) {
+                        if (previous != null) {
+                            previous.setNext(newRange);
+                        } else {
+                            ranges = newRange;
+                        }
+                        return;
+                    }
+                }
+
+                if (lowerBound == EMPTY) {
+                    previous = current;
+                }
+                current = current.next();
+            }
+
+            a = lowerBound == EMPTY ? a : lowerBound;
+            if (previous == null) {
+                ranges = new Range(a, b);
+            } else {
+                previous.setNext(new Range(a, b));
+            }
         }
     }
 
