@@ -90,7 +90,7 @@ public class HostInfo {
         this.address = address;
         this.port = port;
         // We divide the window by 2 to take acks into account.
-        this.windowSize = Link.WINDOW_SIZE / numHosts / 2;
+        this.windowSize = Math.max(1, Link.WINDOW_SIZE / numHosts / 2);
         this.numHosts = numHosts;
         for (int i = 1; i <= numHosts; ++i) {
             waitingQueue.put(i, new MessageRange());
@@ -282,6 +282,7 @@ public class HostInfo {
             newTimeout /= lastRTTs.size();
             newTimeout += 50;
             currentTimeout.set(newTimeout);
+            System.err.println(newTimeout);
         }
     }
 }

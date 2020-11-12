@@ -81,7 +81,11 @@ public class Packet {
      * @return The newly created packet.
      */
     public Packet changeLastHop(int id) {
-        return new Packet(messages, (byte)id, ack);
+        return new Packet(messages, (byte)id, ack, timestampMs);
+    }
+
+    public Packet resetTimestamp() {
+        return new Packet(messages, lastHop, ack);
     }
 
     /**

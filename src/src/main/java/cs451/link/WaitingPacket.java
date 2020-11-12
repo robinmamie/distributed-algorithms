@@ -24,12 +24,6 @@ class WaitingPacket {
     private final long timestamp;
 
     /**
-     * The numeric value of the timeout, fixed for the lifetime of this wrapper
-     * packet.
-     */
-    private final long timeout;
-
-    /**
      * Create a "waiting" packet, giving information about when to resend the
      * message if it was not yet acked.
      *
@@ -41,7 +35,6 @@ class WaitingPacket {
         this.host = host;
 
         timestamp = System.currentTimeMillis();
-        timeout = host.getTimeout();
     }
 
     /**
@@ -62,11 +55,11 @@ class WaitingPacket {
      * @return The same or a new WaitingPacket.
      */
     public WaitingPacket resendIfTimedOut(Runnable toExecute) {
-        if (System.currentTimeMillis() - timestamp < timeout) {
+        if (System.currentTimeMillis() - timestamp < host.getTimeout()) {
             return this;
         }
-        host.testAndDouble((int) timeout);
+        host.testAndDouble((int) host.getTimeout());
         toExecute.run();
-        return new WaitingPacket(packet, host);
+        return new WaitingPacket(packet.resetTimestamp(), host);
     }
 }

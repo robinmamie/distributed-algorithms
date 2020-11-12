@@ -58,12 +58,12 @@ class StubbornLink extends AbstractLink {
      */
     private void deliver(Packet packet) {
         int hostId = packet.getLastHop();
-        HostInfo hostInfo = getHostInfo(hostId);
-        // Reset the timeout, as we got an answer from the distant host.
-        hostInfo.resetTimeout(packet);
 
         if (!packet.isAck()) {
             fLink.send(packet.toAck(getMyId()), hostId);
+        } else {
+            // Reset the timeout, as we got an answer from the distant host.
+            getHostInfo(hostId).resetTimeout(packet);
         }
 
         for (Message message: packet.getMessages()) {
@@ -95,7 +95,7 @@ class StubbornLink extends AbstractLink {
         for (WaitingPacket wp : wps) {
             if (!host.isDelivered(wp.getPacket())) {
                 try {
-                    WaitingPacket newWp = wp.resendIfTimedOut(() -> fLink.send(wp.getPacket(), hostId));
+                    WaitingPacket newWp = wp.resendIfTimedOut(() -> fLink.send(wp.getPacket().resetTimestamp(), hostId));
                     host.addPacketToConfirm(newWp);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

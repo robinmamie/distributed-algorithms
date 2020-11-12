@@ -15,12 +15,12 @@ public interface Link {
     /**
      * The number of messages to be sent at a maximum, for all hosts.
      */
-    public static final int WINDOW_SIZE = 1 << 16;
+    public static final int WINDOW_SIZE = 1 << 6;
 
     /**
      * The base timeout value for lost messages, in milliseconds.
      */
-    public static final long TIMEOUT_MS = 550;
+    public static final long TIMEOUT_MS = 1000;
 
     /**
      * Send a message through a link.
