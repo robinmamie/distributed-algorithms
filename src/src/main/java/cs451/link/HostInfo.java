@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -39,6 +40,16 @@ public class HostInfo {
      * The current timeout of this host.
      */
     private final AtomicLong currentTimeout = new AtomicLong(Link.TIMEOUT_MS);
+
+    /**
+     * The number of RTTs saved for the timeout computation.
+     */
+    private final int SAVED_RTTS = 10;
+
+    /**
+     * The list of the last SAVED_RTTS for the timeout computation.
+     */
+    private final Queue<Integer> lastRTTs = new LinkedList<>();
 
     /**
      * The address of this host.
@@ -83,6 +94,9 @@ public class HostInfo {
         for (int i = 1; i <= numHosts; ++i) {
             waitingQueue.put(i, new MessageRange());
             delivered.put(i, new MessageRange());
+        }
+        for (int i = 0; i < SAVED_RTTS; i++) {
+            lastRTTs.add((int)Link.TIMEOUT_MS);
         }
     }
 
@@ -220,22 +234,40 @@ public class HostInfo {
     }
 
     /**
-     * Reset the value of this host's timeout to the baseline.
+     * Reset the value of this host's timeout by adding the reported RTT to the
+     * list of most recent RTTs for this host.
+     * 
+     * @param message The message reporting the new RTT.
      */
-    public void resetTimeout() {
-        currentTimeout.set(Link.TIMEOUT_MS);
+    public void resetTimeout(Message message) {
+        setTimeout(message.getAgeInMs());
     }
 
     /**
-     * Test the timeout of this current hosts, and if it checks out and is not equal
-     * or greater than 16 times the baseline value, double it.
+     * Add double the reported RTT to the list of most recent RTTs for this host.
      *
-     * @param messageTimeout The supposed current timeout. It will only double if
-     *                       this value and the saved timeout match up.
+     * @param messageTimeout The timeout used for the message, in ms.
      */
-    public void testAndDouble(long messageTimeout) {
-        if (currentTimeout.get() < Link.TIMEOUT_MS * 16) {
-            currentTimeout.compareAndSet(messageTimeout, messageTimeout * 2);
+    public void testAndDouble(int messageTimeout) {
+        setTimeout(messageTimeout * 2);
+    }
+
+    /**
+     * Adds the timeout to the list, and computes a new timeout value.
+     *
+     * @param messageTimeout The reported timeout, in ms.
+     */
+    private void setTimeout(int messageTimeout) {
+        synchronized (lastRTTs) {
+            lastRTTs.poll();
+            lastRTTs.add(messageTimeout);
+            int newTimeout = 0;
+            for (Integer t: lastRTTs) {
+                newTimeout += t;
+            }
+            newTimeout /= lastRTTs.size();
+            newTimeout += 50;
+            currentTimeout.set(newTimeout);
         }
     }
 }

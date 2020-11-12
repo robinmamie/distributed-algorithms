@@ -58,7 +58,7 @@ class StubbornLink extends AbstractLink {
         int hostId = message.getLastHop();
         HostInfo hostInfo = getHostInfo(hostId);
         // Reset the timeout, as we got an answer from the distant host.
-        hostInfo.resetTimeout();
+        hostInfo.resetTimeout(message);
 
         if (!message.isAck()) {
             fLink.send(message.toAck(getMyId()), hostId);

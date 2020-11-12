@@ -78,7 +78,7 @@ class FairLossLink extends AbstractLink {
         DatagramPacket packet;
         byte[] buf;
         while (true) {
-            buf = new byte[6];
+            buf = new byte[Message.PACKET_SIZE];
             packet = new DatagramPacket(buf, buf.length);
             try {
                 socket.receive(packet);

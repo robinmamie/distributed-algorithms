@@ -65,7 +65,7 @@ class WaitingPacket {
         if (System.currentTimeMillis() - timestamp < timeout) {
             return this;
         }
-        host.testAndDouble(timeout);
+        host.testAndDouble((int) timeout);
         toExecute.run();
         return new WaitingPacket(message, host);
     }

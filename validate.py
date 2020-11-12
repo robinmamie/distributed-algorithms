@@ -471,7 +471,7 @@ if __name__ == "__main__":
     testConfig = {
         # Network configuration using the tc command
         'TC': {
-            'delay': ('200ms', '50ms'),
+            'delay': ('1000ms', '50ms'),
             'loss': ('10%', '25%'),
             'reordering': ('25%', '50%')
         },

@@ -5,10 +5,12 @@ package cs451.message;
  */
 public class Message {
 
-    private static final int PACKET_SIZE = 6;
+    public static final int PACKET_SIZE = 1+1+4+4;
+    public static final int MAX_PAYLOAD_SIZE = 65507;
     private static final int LAST_HOP_OFFSET = 0;
     private static final int ORIGIN_ID_OFFSET = 1;
     private static final int MESSAGE_ID_OFFSET = 2;
+    private static final int TIMESTAMP_OFFSET = 6;
 
     /**
      * The last hop of the message, i.e. the ID of the host that sent it (this is
@@ -31,19 +33,24 @@ public class Message {
      * The acknowledgement flag of this message.
      */
     private final boolean ack;
+    
+    private final int timestampMs;
 
     private Message(int originId, int messageId, int lastHop, boolean ack) {
-        this.originId = (byte) originId;
-        this.messageId = messageId;
-        this.lastHop = (byte) lastHop;
-        this.ack = ack;
+        this((byte)originId, messageId, (byte)lastHop, ack);
     }
 
     private Message(byte originId, int messageId, byte lastHop, boolean ack) {
+        this(originId, messageId, lastHop, ack, (int) System.currentTimeMillis());
+    }
+
+    private Message(byte originId, int messageId, byte lastHop, boolean ack, int timestamp) {
         this.originId = originId;
         this.messageId = messageId;
         this.lastHop = lastHop;
         this.ack = ack;
+        this.timestampMs = timestamp;
+
     }
 
     /**
@@ -119,6 +126,10 @@ public class Message {
         return ack;
     }
 
+    public int getAgeInMs() {
+        return (int) System.currentTimeMillis() - timestampMs;
+    }
+
     @Override
     public boolean equals(Object that) {
         return that instanceof Message && this.getMessageId() == (((Message) that).getMessageId())
@@ -149,6 +160,7 @@ public class Message {
         if (ack) {
             datagram[MESSAGE_ID_OFFSET] |= (byte) 0x80;
         }
+        ByteOp.intToByte(timestampMs, datagram, TIMESTAMP_OFFSET);
         return datagram;
     }
 
@@ -163,7 +175,8 @@ public class Message {
         byte originId = datagram[ORIGIN_ID_OFFSET];
         boolean ack = (datagram[MESSAGE_ID_OFFSET] & (byte) 0x80) != 0;
         datagram[MESSAGE_ID_OFFSET] &= (byte) 0x7F;
-        int messageId = ByteOp.byteToInt(datagram, 2);
-        return new Message(originId, messageId, lastHop, ack);
+        int messageId = ByteOp.byteToInt(datagram, MESSAGE_ID_OFFSET);
+        int timestamp = ByteOp.byteToInt(datagram, TIMESTAMP_OFFSET);
+        return new Message(originId, messageId, lastHop, ack, timestamp);
     }
 }

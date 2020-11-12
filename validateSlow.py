@@ -471,15 +471,15 @@ if __name__ == "__main__":
     testConfig = {
         # Network configuration using the tc command
         'TC': {
-            'delay': ('200ms', '50ms'),
+            'delay': ('1000ms', '50ms'),
             'loss': ('10%', '25%'),
             'reordering': ('25%', '50%')
         },
 
         # StressTest configuration
         'ST': {
-            'concurrency' : 50, # How many threads are interferring with the running processes
-            'attempts' : 50, # How many interferring attempts each threads does
+            'concurrency' : 10, # How many threads are interferring with the running processes
+            'attempts' : 10, # How many interferring attempts each threads does
             'attemptsDistribution' : { # Probability with which an interferring thread will
                 'STOP': 0.45,          # select an interferring action (make sure they add up to 1)
                 'CONT': 0.45,
