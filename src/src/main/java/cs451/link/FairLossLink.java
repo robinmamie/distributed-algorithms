@@ -10,8 +10,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import cs451.listener.BListener;
+import cs451.listener.PListener;
 import cs451.message.Message;
+import cs451.message.Packet;
 import cs451.parser.Host;
 
 /**
@@ -38,7 +39,7 @@ class FairLossLink extends AbstractLink {
      * @param listener The listener to call once a message is delivered.
      * @param myId     The ID of the local host.
      */
-    public FairLossLink(int port, List<Host> hosts, BListener listener, int myId) {
+    public FairLossLink(int port, List<Host> hosts, PListener listener, int myId) {
         super(listener, myId, hosts);
         try {
             socket = new DatagramSocket(port);
@@ -55,9 +56,13 @@ class FairLossLink extends AbstractLink {
 
     @Override
     public void send(Message message, int hostId) {
+        throw new RuntimeException("FL-Link: Send packet, not message!");
+    }
+
+    public void send(Packet packet, int hostId) {
         HostInfo host = getHostInfo(hostId);
-        message = message.changeLastHop(getMyId());
-        byte[] buf = message.serialize();
+        packet = packet.changeLastHop(getMyId());
+        byte[] buf = packet.serialize();
         try {
             sendQueue.put(new DatagramPacket(buf, buf.length, host.getAddress(), host.getPort()));
         } catch (InterruptedException e) {
@@ -75,18 +80,18 @@ class FairLossLink extends AbstractLink {
      * Receive, de-serialize and deliver incoming packets (to the next layer).
      */
     private void deliver() {
-        DatagramPacket packet;
+        DatagramPacket datagramPacket;
         byte[] buf;
         while (true) {
-            buf = new byte[Message.PACKET_SIZE];
-            packet = new DatagramPacket(buf, buf.length);
+            buf = new byte[Packet.MAX_PAYLOAD_SIZE];
+            datagramPacket = new DatagramPacket(buf, buf.length);
             try {
-                socket.receive(packet);
+                socket.receive(datagramPacket);
             } catch (IOException e) {
                 throw new RuntimeException("Cannot receive packets!");
             }
-            Message message = Message.deserialize(packet.getData());
-            handleListener(message);
+            Packet packet = Packet.deserialize(datagramPacket.getData());
+            handleListener(packet);
         }
     }
 

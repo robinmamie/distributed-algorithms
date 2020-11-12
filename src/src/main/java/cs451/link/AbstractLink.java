@@ -7,7 +7,9 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import cs451.listener.BListener;
+import cs451.listener.PListener;
 import cs451.message.Message;
+import cs451.message.Packet;
 import cs451.parser.Host;
 
 /**
@@ -27,7 +29,12 @@ public abstract class AbstractLink implements Link {
     /**
      * The listener to be called once a message is delivered.
      */
-    private final BListener listener;
+    private final BListener bListener;
+    
+    /**
+    * The listener to be called once a packet is delivered.
+    */
+   private final PListener pListener;
 
     /**
      * The ID of the local host.
@@ -43,7 +50,38 @@ public abstract class AbstractLink implements Link {
      * @param hosts    The complete list of hosts of the network.
      */
     protected AbstractLink(BListener listener, int myId, List<Host> hosts) {
-        this.listener = listener;
+        this.bListener = listener;
+        this.pListener = null;
+        this.myId = myId;
+
+        // Only create host information once.
+        if (hostInfo.isEmpty()) {
+            for (Host host : hosts) {
+                int i = host.getId();
+                if (i != getMyId()) {
+                    HostInfo hostI;
+                    try {
+                        hostI = new HostInfo(InetAddress.getByName(host.getIp()), host.getPort(), hosts.size());
+                    } catch (UnknownHostException e) {
+                        throw new RuntimeException("Invalid IP address given!");
+                    }
+                    hostInfo.put(i, hostI);
+                }
+            }
+        }
+    }
+
+    /**
+     * The constructor of the AbstractLink, creating empty host information if it is
+     * called for the first time. Used for the low-level link, fair-loss link.
+     *
+     * @param listener The listener to call once a packet is delivered.
+     * @param myId     The ID of the local host.
+     * @param hosts    The complete list of hosts of the network.
+     */
+    protected AbstractLink(PListener listener, int myId, List<Host> hosts) {
+        this.bListener = null;
+        this.pListener = listener;
         this.myId = myId;
 
         // Only create host information once.
@@ -68,8 +106,17 @@ public abstract class AbstractLink implements Link {
      *
      * @param m The message to deliver.
      */
-    protected void handleListener(Message m) {
-        listener.apply(m);
+    protected void handleListener(Message message) {
+        bListener.apply(message);
+    }
+
+    /**
+     * Deliver the given packet.
+     *
+     * @param m The message to deliver.
+     */
+    protected void handleListener(Packet packet) {
+        pListener.apply(packet);
     }
 
     /**

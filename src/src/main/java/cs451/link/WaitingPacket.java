@@ -1,6 +1,6 @@
 package cs451.link;
 
-import cs451.message.Message;
+import cs451.message.Packet;
 
 /**
  * Implements an abstraction above the simple message. It mainly gives
@@ -14,9 +14,9 @@ class WaitingPacket {
     private final HostInfo host;
 
     /**
-     * The underlying message.
+     * The underlying packet.
      */
-    private final Message message;
+    private final Packet packet;
 
     /**
      * The timestamp of the message at its creation, in milliseconds.
@@ -36,8 +36,8 @@ class WaitingPacket {
      * @param message The underlying message.
      * @param host    The information about the distant host.
      */
-    public WaitingPacket(Message message, HostInfo host) {
-        this.message = message;
+    public WaitingPacket(Packet packet, HostInfo host) {
+        this.packet = packet;
         this.host = host;
 
         timestamp = System.currentTimeMillis();
@@ -45,12 +45,12 @@ class WaitingPacket {
     }
 
     /**
-     * Get the underlying message.
+     * Get the underlying packet.
      *
-     * @return The underlying message of this waiting packet.
+     * @return The underlying packet of this waiting packet.
      */
-    public Message getMessage() {
-        return message;
+    public Packet getPacket() {
+        return packet;
     }
 
     /**
@@ -59,7 +59,7 @@ class WaitingPacket {
      *
      * @param toExecute Function to run if the message has timed out (should trigger
      *                  a resending).
-     * @return The same or a new Waiting packet.
+     * @return The same or a new WaitingPacket.
      */
     public WaitingPacket resendIfTimedOut(Runnable toExecute) {
         if (System.currentTimeMillis() - timestamp < timeout) {
@@ -67,6 +67,6 @@ class WaitingPacket {
         }
         host.testAndDouble((int) timeout);
         toExecute.run();
-        return new WaitingPacket(message, host);
+        return new WaitingPacket(packet, host);
     }
 }

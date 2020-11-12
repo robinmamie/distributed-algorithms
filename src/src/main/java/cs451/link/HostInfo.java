@@ -11,6 +11,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import cs451.message.Message;
+import cs451.message.Packet;
 import cs451.vectorclock.MessageRange;
 
 /**
@@ -129,6 +130,19 @@ public class HostInfo {
     }
 
     /**
+     * Check whether a given packet was already delivered, coming from this host.
+     * A packet can be considered as delivered if its first message is marked as
+     * delivered (no packet corruption).
+     *
+     * @param p The packet to check.
+     * @return Whether the given packet was already delivered.
+     */
+    public boolean isDelivered(Packet p) {
+        Message m = p.getMessages().get(0);
+        return delivered.get(m.getOriginId()).contains(m.getMessageId());
+    }
+
+    /**
      * Mark a given message as delivered, coming from this host.
      *
      * @param m The message to mark as delivered.
@@ -237,10 +251,10 @@ public class HostInfo {
      * Reset the value of this host's timeout by adding the reported RTT to the
      * list of most recent RTTs for this host.
      * 
-     * @param message The message reporting the new RTT.
+     * @param packet The packet reporting the timeout.
      */
-    public void resetTimeout(Message message) {
-        setTimeout(message.getAgeInMs());
+    public void resetTimeout(Packet packet) {
+        setTimeout(packet.getAgeInMs());
     }
 
     /**

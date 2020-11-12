@@ -1,11 +1,13 @@
 package cs451.link;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import cs451.listener.BListener;
 import cs451.message.Message;
+import cs451.message.Packet;
 import cs451.parser.Host;
 
 /**
@@ -54,19 +56,21 @@ class StubbornLink extends AbstractLink {
      *
      * @param message The message that is delivered by the underlying link.
      */
-    private void deliver(Message message) {
-        int hostId = message.getLastHop();
+    private void deliver(Packet packet) {
+        int hostId = packet.getLastHop();
         HostInfo hostInfo = getHostInfo(hostId);
         // Reset the timeout, as we got an answer from the distant host.
-        hostInfo.resetTimeout(message);
+        hostInfo.resetTimeout(packet);
 
-        if (!message.isAck()) {
-            fLink.send(message.toAck(getMyId()), hostId);
+        if (!packet.isAck()) {
+            fLink.send(packet.toAck(getMyId()), hostId);
         }
 
-        // An ack gives us valuable information. We treat them as if they were messages
-        // in themselves.
-        handleListener(message);
+        for (Message message: packet.getMessages()) {
+            // An ack gives us valuable information. We treat them as if they were messages
+            // in themselves.
+            handleListener(message);
+        }
     }
 
     /**
@@ -89,9 +93,9 @@ class StubbornLink extends AbstractLink {
     private void checkNextPacketToConfirm(int hostId, HostInfo host) {
         List<WaitingPacket> wps = host.getNextStubbornPackets();
         for (WaitingPacket wp : wps) {
-            if (!host.isDelivered(wp.getMessage())) {
+            if (!host.isDelivered(wp.getPacket())) {
                 try {
-                    WaitingPacket newWp = wp.resendIfTimedOut(() -> fLink.send(wp.getMessage(), hostId));
+                    WaitingPacket newWp = wp.resendIfTimedOut(() -> fLink.send(wp.getPacket(), hostId));
                     host.addPacketToConfirm(newWp);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -109,13 +113,17 @@ class StubbornLink extends AbstractLink {
      * @param host   The network information related to the host.
      */
     private void emptyWaitingQueue(int hostId, HostInfo host) {
-        if (host.canSendWaitingMessages()) {
+        List<Message> messages = new LinkedList<>();
+        for (int i = 0; i < 10000 && host.canSendWaitingMessages(); ++i) {
             Message m = host.getNextWaitingMessage();
-            if (m == null) {
-                return;
+            if (m != null) {
+                messages.add(m);
             }
-            fLink.send(m, hostId);
-            WaitingPacket wpa = new WaitingPacket(m, host);
+        }
+        if (!messages.isEmpty()) {
+            Packet p = Packet.createPacket(messages, getMyId());
+            fLink.send(p, hostId);
+            WaitingPacket wpa = new WaitingPacket(p, host);
             try {
                 host.addPacketToConfirm(wpa);
             } catch (InterruptedException e) {
