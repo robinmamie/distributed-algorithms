@@ -11,7 +11,8 @@ import cs451.parser.Host;
 import cs451.vectorclock.VectorClock;
 
 /**
- * First-in, first-out broadcast abstraction.
+ * First-in, first-out broadcast abstraction. Implements the validity, no
+ * duplication, no creation, uniform agreement and FIFO properties.
  */
 class FIFOBroadcast implements Broadcast {
 

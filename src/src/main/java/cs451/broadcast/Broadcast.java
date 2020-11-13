@@ -16,7 +16,8 @@ interface Broadcast {
     void broadcast(Message message);
 
     /**
-     * Broadcast an entire range of messages at once.
+     * Broadcast an entire range of messages at once. The messages are automatically
+     * delivered to the local host via the BroadcastAcks interface.
      *
      * @param numberOfMessages The number of messages to be broadcast: effectively
      *                         put message 1 to numberOfMessages in a buffer.

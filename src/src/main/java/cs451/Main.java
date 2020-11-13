@@ -12,7 +12,7 @@ public class Main {
         System.out.println("Immediately stopping network packet processing.");
 
         // write/flush output file if necessary
-        BroadcastHandler.flushLog();
+        BroadcastHandler.closeLog();
         System.out.println("Writing output.");
     }
 

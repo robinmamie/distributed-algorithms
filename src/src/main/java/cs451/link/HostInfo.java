@@ -8,6 +8,7 @@ import java.util.Queue;
 import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import cs451.message.Message;
@@ -77,10 +78,24 @@ public class HostInfo {
      * The origin ID cycle, used to retrieve the next waiting message.
      */
     private int nextOriginToSend = 1;
-    
-    private final VectorClock packetNumbersSent = new VectorClock();
-    private final VectorClock theirPacketNumberDelivered = new VectorClock();
+
+    /**
+     * The count of used packetNumbers for this hist.
+     */
+    private final AtomicInteger packetNumbersSent = new AtomicInteger(0);
+
+    /**
+     * The vector clock of packet numbers originating from the local host and
+     * that have been delivered by the distant host. Used to stop stubbornly
+     * resending packets.
+     */
     private final VectorClock myPacketNumberDelivered = new VectorClock();
+
+    /**
+     * The vector clock of packet numbers originating from the distant host and
+     * that have been locally delivered.
+     */
+    private final VectorClock theirPacketNumberDelivered = new VectorClock();
 
     /**
      * Create a new HostInfo instance. The local window size, i.e. the max. number
@@ -200,6 +215,14 @@ public class HostInfo {
     }
 
     /**
+     * Atomically return a new packet number.
+     */
+    public int getNewPacketNumber() {
+        int number = packetNumbersSent.incrementAndGet();
+        return number;
+    }
+
+    /**
      * Add a given WaitingPacket to the "stubborn" (not acked) queue.
      *
      * @param wp The waiting packet to add to the stubborn queue.
@@ -231,7 +254,6 @@ public class HostInfo {
         waitingQueue.get(originId).setRange(a, b);
     }
 
-    // TODO doc
     /**
      * Check whether we can send a new message, i.e. if the size of the "stubborn"
      * queues (messages not yet acked) is less than the window size.
@@ -239,7 +261,7 @@ public class HostInfo {
      * @return Whether we can send a new message.
      */
     public boolean canSendWaitingMessages() {
-        return stubbornQueue.size() < windowSize;//packetNumbersSent.getStateOfVc() - myPacketNumberDelivered.getStateOfVc() < windowSize;
+        return stubbornQueue.size() < windowSize;
     }
 
     /**
@@ -260,10 +282,10 @@ public class HostInfo {
             }
             mId = waitingQueue.get(nextHost).poll();
             if (0 < mId) {
-                break;
+                return Message.createMessage(nextHost, mId);
             }
         }
-        return mId < 0 ? null : Message.createMessage(nextHost, mId);
+        return null;
     }
 
     /**
@@ -286,8 +308,8 @@ public class HostInfo {
     }
 
     /**
-     * Add double the actual to the list of most recent RTTs for this host. This
-     * method will not double the actual RTT
+     * Add double the actual timeout to the list of most recent RTTs for this
+     * host. This method will therefore not actually double the actual RTT.
      */
     public void exponentialBackOff() {
         long timeout = getTimeout();
@@ -308,17 +330,9 @@ public class HostInfo {
                 newTimeout += t;
             }
             newTimeout /= lastRTTs.size();
+            // Add 50ms for processing purposes, and to avoid any DDOS.
             newTimeout += 50;
             currentTimeout.set(newTimeout);
         }
-    }
-
-    public int getNewPacketNumber() {
-        int number;
-        synchronized (packetNumbersSent) {
-            number = 1 + packetNumbersSent.getStateOfVc();
-            packetNumbersSent.addMember(number);
-        }
-        return number;
     }
 }

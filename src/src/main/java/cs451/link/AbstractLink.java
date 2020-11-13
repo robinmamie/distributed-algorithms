@@ -17,7 +17,9 @@ import cs451.parser.Host;
  * store a listener each and handle it once a message is delivered.
  *
  * All the links also share common host information, as can be seen in the class
- * HostInfo.
+ * HostInfo. This information is valuable for the Broadcast layers, as the
+ * information about delivered messages is shared between all the parts of the
+ * program. This is done in a memory optimization effort.
  */
 public abstract class AbstractLink implements Link {
 
@@ -53,22 +55,7 @@ public abstract class AbstractLink implements Link {
         this.bListener = listener;
         this.pListener = null;
         this.myId = myId;
-
-        // Only create host information once.
-        if (hostInfo.isEmpty()) {
-            for (Host host : hosts) {
-                int i = host.getId();
-                if (i != getMyId()) {
-                    HostInfo hostI;
-                    try {
-                        hostI = new HostInfo(InetAddress.getByName(host.getIp()), host.getPort(), hosts.size());
-                    } catch (UnknownHostException e) {
-                        throw new RuntimeException("Invalid IP address given!");
-                    }
-                    hostInfo.put(i, hostI);
-                }
-            }
-        }
+        createHostInfo(hosts);
     }
 
     /**
@@ -83,7 +70,15 @@ public abstract class AbstractLink implements Link {
         this.bListener = null;
         this.pListener = listener;
         this.myId = myId;
+        createHostInfo(hosts);
+    }
 
+    /**
+     * Create host information. Can only be created once, at the start.
+     *
+     * @param hosts The list of hosts.
+     */
+    private void createHostInfo(List<Host> hosts) {
         // Only create host information once.
         if (hostInfo.isEmpty()) {
             for (Host host : hosts) {
@@ -93,7 +88,8 @@ public abstract class AbstractLink implements Link {
                     try {
                         hostI = new HostInfo(InetAddress.getByName(host.getIp()), host.getPort(), hosts.size());
                     } catch (UnknownHostException e) {
-                        throw new RuntimeException("Invalid IP address given!");
+                        System.err.println("Invalid IP address given: " + host.getIp());
+                        return;
                     }
                     hostInfo.put(i, hostI);
                 }

@@ -53,7 +53,7 @@ class WaitingPacket {
 
     /**
      * Check if the message has timed out, if yes, execute the given function and
-     * double the timeout of the host.
+     * adapt the timeout of the host.
      *
      * @param toExecute Function to run if the message has timed out (should trigger
      *                  a resending).

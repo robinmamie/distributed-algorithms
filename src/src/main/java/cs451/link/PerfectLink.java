@@ -8,7 +8,8 @@ import cs451.message.Packet;
 import cs451.parser.Host;
 
 /**
- * Perfect link abstraction.
+ * Perfect link abstraction. Implements the reliable delivery, no duplication
+ * and no creation properties.
  */
 class PerfectLink extends AbstractLink {
 
@@ -41,15 +42,17 @@ class PerfectLink extends AbstractLink {
     }
 
     /**
-     * Check if received messages were already delivered. If not, deliver
+     * Check if received messages were already delivered. If not, deliver them.
      *
      * @param packet The packet that is delivered by the underlying link.
      */
     private void deliver(Packet packet) {
         HostInfo hostInfo = getHostInfo(packet.getLastHop());
+        // First, check if the packet was already delivered.
         if (!hostInfo.isDelivered(packet)) {
             hostInfo.markDelivered(packet);
             packet.deliverMessages(message -> {
+                // Then, only deliver new messages.
                 if (!hostInfo.isDelivered(message)) {
                     hostInfo.markDelivered(message);
                     handleListener(message);

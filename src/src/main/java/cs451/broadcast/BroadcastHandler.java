@@ -11,7 +11,7 @@ import cs451.parser.Coordinator;
 import cs451.parser.Parser;
 
 /**
- * Concrete broadcast handler doing all the initial work.
+ * Concrete broadcast handler doing all the initial broadcasting work.
  */
 public class BroadcastHandler {
 
@@ -36,16 +36,17 @@ public class BroadcastHandler {
     private static Coordinator coordinator;
 
     private BroadcastHandler() {
+        // Everything is statically done in this class.
     }
 
     /**
      * Flush the log (to be used at the end of the program's lifetime).
      */
-    public static void flushLog() {
+    public static void closeLog() {
         try {
             writer.close();
         } catch (IOException e) {
-            throw new RuntimeException("Cannot close output file.");
+            System.err.println("Cannot close output file.");
         }
     }
 
@@ -60,7 +61,7 @@ public class BroadcastHandler {
         try {
             writer = new BufferedWriter(new FileWriter(parser.output()));
         } catch (IOException e1) {
-            throw new RuntimeException("Cannot create output file.");
+            System.err.println("Cannot create output file.");
         }
 
         BroadcastHandler.coordinator = coordinator;
@@ -132,7 +133,7 @@ public class BroadcastHandler {
      * Start LCausal-broadcasting messages.
      */
     private static void startLCausal() {
-        throw new RuntimeException("LCausal-Broadcast not implemented!");
+        System.err.println("LCausal-Broadcast not implemented!");
     }
 
     /**
@@ -146,7 +147,7 @@ public class BroadcastHandler {
             String line = reader.readLine();
             return Integer.parseInt(line);
         } catch (IOException e) {
-            throw new RuntimeException("Problem with the config file!");
+            System.err.println("Problem with the config file!");
         }
     }
 }

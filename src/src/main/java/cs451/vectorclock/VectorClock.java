@@ -47,8 +47,4 @@ public class VectorClock {
     public int getStateOfVc() {
         return range.endOfFirstRange();
     }
-
-    public MessageRange getRange() {
-        return range;
-    }
 }

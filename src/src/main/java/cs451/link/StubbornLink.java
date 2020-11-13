@@ -11,7 +11,8 @@ import cs451.message.Packet;
 import cs451.parser.Host;
 
 /**
- * Stubborn link abstraction.
+ * Stubborn link abstraction. Implements the stubborn delivery and no creation
+ * properties.
  */
 class StubbornLink extends AbstractLink {
 
@@ -32,8 +33,8 @@ class StubbornLink extends AbstractLink {
         super(listener, myId, hosts);
         this.fLink = new FairLossLink(port, hosts, this::deliver, myId);
 
-        // Create threads whose sole job is to empty waiting queues and check if
-        // messages were acked.
+        // Create a thread whose sole job is to empty waiting queues and check if
+        // messages were acked, or otherwise resend them.
         ExecutorService executor = Executors.newFixedThreadPool(1);
         executor.execute(this::stubbornSend);
     }
@@ -73,7 +74,7 @@ class StubbornLink extends AbstractLink {
 
     /**
      * Core function of the stubborn link, which empties waiting queues and re-sends
-     * packets when necessary.
+     * packets if and when necessary.
      */
     private void stubbornSend() {
         while (true) {
@@ -92,9 +93,8 @@ class StubbornLink extends AbstractLink {
         List<WaitingPacket> wps = host.getNextStubbornPackets();
         for (WaitingPacket wp : wps) {
             if (!host.isMineDelivered(wp.getPacket())) {
-                WaitingPacket newWp = wp.resendIfTimedOut(() -> {
-                    fLink.send(wp.getPacket().resetTimestamp(), hostId);
-                });
+                WaitingPacket newWp =
+                    wp.resendIfTimedOut(() -> fLink.send(wp.getPacket().resetTimestamp(), hostId));
                 try {
                     host.addPacketToConfirm(newWp);
                 } catch (InterruptedException e) {
@@ -115,7 +115,7 @@ class StubbornLink extends AbstractLink {
     private void emptyWaitingQueue(int hostId, HostInfo host) {
         List<Message> messages = new LinkedList<>();
         if (host.canSendWaitingMessages()) {
-            for (int i = 0; i < Packet.MESSAGES_PER_PACKET; ++i) {
+            for (int i = 0; i < Packet.MAX_MESSAGES_PER_PACKET; ++i) {
                 Message m = host.getNextWaitingMessage();
                 if (m == null) {
                     break;
@@ -123,9 +123,9 @@ class StubbornLink extends AbstractLink {
                 messages.add(m);
             }
             if (!messages.isEmpty()) {
-                Packet p = Packet.createPacket(messages, host.getNewPacketNumber(), getMyId());
-                fLink.send(p, hostId);
-                WaitingPacket wpa = new WaitingPacket(p, host);
+                Packet packet = Packet.createPacket(messages, host.getNewPacketNumber(), getMyId());
+                fLink.send(packet, hostId);
+                WaitingPacket wpa = new WaitingPacket(packet, host);
                 try {
                     host.addPacketToConfirm(wpa);
                 } catch (InterruptedException e) {

@@ -16,7 +16,8 @@ import cs451.message.Packet;
 import cs451.parser.Host;
 
 /**
- * Fair-loss link abstraction.
+ * Fair-loss link abstraction. Implements the fair-loss, finite duplication and
+ * no creation properties.
  */
 class FairLossLink extends AbstractLink {
 
@@ -56,9 +57,15 @@ class FairLossLink extends AbstractLink {
 
     @Override
     public void send(Message message, int hostId) {
-        throw new RuntimeException("FL-Link: Send packet, not message!");
+        System.err.println("FL-Link: send packets, not messages!");
     }
 
+    /**
+     * Send a message through a link.
+     *
+     * @param package The package to be sent.
+     * @param hostId  The ID of the recipient.
+     */
     public void send(Packet packet, int hostId) {
         byte[] buf = packet.changeLastHop(getMyId()).serialize();
         HostInfo host = getHostInfo(hostId);
@@ -71,8 +78,7 @@ class FairLossLink extends AbstractLink {
 
     @Override
     public void sendRange(int hostId, int originId, int messageId) {
-        // This function is not designed for this level of Link.
-        throw new RuntimeException();
+        System.err.println("FL-Link: the sendRange function is not designed for this level of Link.");
     }
 
     /**
@@ -87,7 +93,8 @@ class FairLossLink extends AbstractLink {
             try {
                 socket.receive(datagramPacket);
             } catch (IOException e) {
-                throw new RuntimeException("Cannot receive packets!");
+                System.err.println("Cannot receive packets!");
+                e.printStackTrace();
             }
             Packet packet = Packet.deserialize(datagramPacket.getData());
             handleListener(packet);
@@ -105,7 +112,8 @@ class FairLossLink extends AbstractLink {
                 socket.send(packet);
             }
         } catch (Exception e) {
-            throw new RuntimeException("Cannot send packets!");
+            System.err.println("Cannot send packets!");
+            e.printStackTrace();
         }
     }
 }

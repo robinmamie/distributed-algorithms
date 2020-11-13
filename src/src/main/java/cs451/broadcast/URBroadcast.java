@@ -13,7 +13,8 @@ import cs451.vectorclock.VectorClock;
 
 /**
  * Uniform reliable broadcast abstraction. Delivers messages once it is sure
- * that more than half of all hosts have BEB-delivered the message.
+ * that more than half of all hosts have BEB-delivered the message. Implements
+ * the validity, no duplication, no creation and uniform agreement properties.
  */
 class URBroadcast implements Broadcast {
 
@@ -81,17 +82,14 @@ class URBroadcast implements Broadcast {
         int origin = message.getOriginId();
         int messageId = message.getMessageId();
         if (!delivered.get(origin).contains(messageId)) {
-            // If not already delivered, broadcast new message, or check if number of
-            // acknowledgements is good to deliver said message.
+            // If not already delivered, broadcast new message, or check if the
+            // number of acknowledgements is good to deliver said message.
             if (!acks.wasAlreadyBroadcast(message)) {
                 acks.add(message);
                 broadcast(message);
-            } else {
-                int count = acks.ackCount(message);
-                if (count > threshold) {
-                    delivered.get(origin).addMember(messageId);
-                    deliver.apply(message);
-                }
+            } else if (acks.ackCount(message) > threshold) {
+                delivered.get(origin).addMember(messageId);
+                deliver.apply(message);
             }
         }
     }

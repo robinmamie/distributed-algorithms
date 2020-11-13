@@ -10,7 +10,8 @@ import cs451.message.Message;
 import cs451.parser.Host;
 
 /**
- * Best effort broadcast abstraction.
+ * Best effort broadcast abstraction. Implements the best-effort validity, no
+ * duplication and no creation properties.
  */
 class BEBroadcast implements Broadcast {
 
@@ -103,7 +104,7 @@ class BEBroadcast implements Broadcast {
     }
 
     /**
-     * Empties the deliver-buffer when it can, by calling the listener of the upper
+     * Empties the delivery buffer when it can, by calling the listener of the upper
      * instance.
      */
     public void run() {

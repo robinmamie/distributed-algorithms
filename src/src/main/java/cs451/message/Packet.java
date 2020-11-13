@@ -1,5 +1,6 @@
 package cs451.message;
 
+import java.util.Arrays;
 import java.util.List;
 
 import cs451.listener.BListener;
@@ -14,18 +15,25 @@ public class Packet {
      */
     public static final int MAX_PAYLOAD_SIZE = 65507;
 
+    // Byte offsets used for the byte datagram.
     private static final int NB_MESSAGES_OFFSET = 0;
     private static final int PACKET_NUMBER_OFFSET = 4;
     private static final int TIMESTAMP_OFFSET = 8;
     private static final int LAST_HOP_OFFSET = 12;
     private static final int ACK_OFFSET = 13;
-    static final int CONTENTS_OFFSET = 14;
+    private static final int CONTENTS_OFFSET = 14;
+
+    /**
+     * The number of bytes used by a message inside the packet. 1 byte for the
+     * host ID (because it is between 1 and 128), 4 for the message ID (because
+     * it is between 1 and MAX_INT).
+     */
+    private static final int SIZE_OF_MESSAGE = 5;
 
     /**
      * The maximum number of messages that can be concatenated inside a packet.
      */
-    public static final int MESSAGES_PER_PACKET = (MAX_PAYLOAD_SIZE - CONTENTS_OFFSET) / (1 + 4);
-
+    public static final int MAX_MESSAGES_PER_PACKET = (MAX_PAYLOAD_SIZE - CONTENTS_OFFSET) / SIZE_OF_MESSAGE;
 
     /**
      * The last hop of the message, i.e. the ID of the host that sent it (this is
@@ -53,6 +61,9 @@ public class Packet {
      */
     private final int timestampMs;
 
+    /**
+     * The packet number, given by the host originally handing out the packet.
+     */
     private final int packetNumber;
 
     private Packet(List<Message> messages, int packetNumber, int lastHop, boolean ack) {
@@ -75,6 +86,8 @@ public class Packet {
         int pointerOrigin = CONTENTS_OFFSET;
         int pointerId = CONTENTS_OFFSET + nbMessages;
         for (Message m : messages) {
+            // NB: the byte layout is optimized for an eventual compression of
+            // the data. However, every characteristic of the message is present.
             datagram[pointerOrigin] = (byte) m.getOriginId();
             ByteOp.intToByte(m.getMessageId(), datagram, pointerId);
             pointerOrigin += 1;
@@ -137,6 +150,12 @@ public class Packet {
         return new Packet(newDatagram, nbMessages, packetNumber, (byte) id, ack, timestampMs);
     }
 
+    /**
+     * Create a new packet by updating its timestamp, generally done when resending
+     * an originally locally created packet.
+     *
+     * @return The newly created packet.
+     */
     public Packet resetTimestamp() {
         byte[] newDatagram = datagram.clone();
         int newTimestamp = (int) System.currentTimeMillis();
@@ -223,6 +242,7 @@ public class Packet {
         byte lastHop = datagram[LAST_HOP_OFFSET];
         boolean ack = datagram[ACK_OFFSET] != 0;
 
-        return new Packet(datagram, nbMessages, packetNumber, lastHop, ack, timestamp);
+        return new Packet(Arrays.copyOfRange(datagram, 0, CONTENTS_OFFSET+SIZE_OF_MESSAGE*nbMessages),
+                            nbMessages, packetNumber, lastHop, ack, timestamp);
     }
 }

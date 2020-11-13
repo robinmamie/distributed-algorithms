@@ -13,7 +13,8 @@ import cs451.parser.Host;
 public interface Link {
 
     /**
-     * The number of packages to be sent at a maximum, for all hosts.
+     * The number of packages to be sent at a maximum, for all hosts. The final
+     * window size will depend on the number of hosts.
      */
     public static final int WINDOW_SIZE = 1 << 10;
 
@@ -39,7 +40,7 @@ public interface Link {
      * Create and schedule the sending of locally created messages.
      *
      * @param hostId    The ID of the recipient.
-     * @param originId  The origin ID of the message.
+     * @param originId  The origin ID of the message (should be the local host ID).
      * @param messageId The maximum message ID of the range (starts at 1).
      */
     void sendRange(int hostId, int originId, int messageId);
