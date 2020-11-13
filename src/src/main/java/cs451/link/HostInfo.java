@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import cs451.message.Message;
 import cs451.message.Packet;
 import cs451.vectorclock.MessageRange;
+import cs451.vectorclock.VectorClock;
 
 /**
  * Gathers all the information collected by the link layer.
@@ -23,7 +24,7 @@ public class HostInfo {
      * The "stubborn" queue, i.e. messages sent to this host that have not been
      * acked yet.
      */
-    private final BlockingQueue<WaitingPacket> stubbornQueue = new LinkedBlockingQueue<>(Link.WINDOW_SIZE);
+    private final BlockingQueue<WaitingPacket> stubbornQueue = new LinkedBlockingQueue<>();
 
     /**
      * The queue of waiting messages, to be emptied once the stubborn queue is small
@@ -45,12 +46,12 @@ public class HostInfo {
     /**
      * The number of RTTs saved for the timeout computation.
      */
-    private final int SAVED_RTTS = 10;
+    private final int SAVED_RTTS = 5;
 
     /**
      * The list of the last SAVED_RTTS for the timeout computation.
      */
-    private final Queue<Integer> lastRTTs = new LinkedList<>();
+    private final Queue<Long> lastRTTs = new LinkedList<>();
 
     /**
      * The address of this host.
@@ -76,6 +77,10 @@ public class HostInfo {
      * The origin ID cycle, used to retrieve the next waiting message.
      */
     private int nextOriginToSend = 1;
+    
+    private final VectorClock packetNumbersSent = new VectorClock();
+    private final VectorClock theirPacketNumberDelivered = new VectorClock();
+    private final VectorClock myPacketNumberDelivered = new VectorClock();
 
     /**
      * Create a new HostInfo instance. The local window size, i.e. the max. number
@@ -97,7 +102,7 @@ public class HostInfo {
             delivered.put(i, new MessageRange());
         }
         for (int i = 0; i < SAVED_RTTS; i++) {
-            lastRTTs.add((int)Link.TIMEOUT_MS);
+            lastRTTs.add(Link.TIMEOUT_MS);
         }
     }
 
@@ -130,16 +135,25 @@ public class HostInfo {
     }
 
     /**
-     * Check whether a given packet was already delivered, coming from this host.
-     * A packet can be considered as delivered if its first message is marked as
-     * delivered (no packet corruption).
+     * Check whether a given packet was already delivered.
      *
      * @param p The packet to check.
      * @return Whether the given packet was already delivered.
      */
     public boolean isDelivered(Packet p) {
-        Message m = p.getMessages().get(0);
-        return delivered.get(m.getOriginId()).contains(m.getMessageId());
+        return p.isAck() ?
+                myPacketNumberDelivered.contains(p.getPacketNumber()) :
+                theirPacketNumberDelivered.contains(p.getPacketNumber());
+    }
+    
+    /**
+     * Check whether a given packet was already delivered, coming from this host.
+     *
+     * @param p The packet to check.
+     * @return Whether the given packet was already delivered.
+     */
+    public boolean isMineDelivered(Packet p) {
+        return myPacketNumberDelivered.contains(p.getPacketNumber());
     }
 
     /**
@@ -149,6 +163,19 @@ public class HostInfo {
      */
     public void markDelivered(Message m) {
         delivered.get(m.getOriginId()).add(m.getMessageId());
+    }
+
+    /**
+     * Mark a given packet as delivered, coming from this host.
+     *
+     * @param p The packet to mark as delivered.
+     */
+    public void markDelivered(Packet p) {
+        if (p.isAck()) {
+            myPacketNumberDelivered.addMember(p.getPacketNumber());
+        } else {
+            theirPacketNumberDelivered.addMember(p.getPacketNumber());
+        }
     }
 
     /**
@@ -204,6 +231,7 @@ public class HostInfo {
         waitingQueue.get(originId).setRange(a, b);
     }
 
+    // TODO doc
     /**
      * Check whether we can send a new message, i.e. if the size of the "stubborn"
      * queues (messages not yet acked) is less than the window size.
@@ -211,7 +239,7 @@ public class HostInfo {
      * @return Whether we can send a new message.
      */
     public boolean canSendWaitingMessages() {
-        return stubbornQueue.size() < windowSize;
+        return packetNumbersSent.getStateOfVc() - myPacketNumberDelivered.getStateOfVc() < windowSize;//stubbornQueue.size() < windowSize;
     }
 
     /**
@@ -258,12 +286,12 @@ public class HostInfo {
     }
 
     /**
-     * Add double the reported RTT to the list of most recent RTTs for this host.
-     *
-     * @param messageTimeout The timeout used for the message, in ms.
+     * Add double the actual to the list of most recent RTTs for this host. This
+     * method will not double the actual RTT
      */
-    public void testAndDouble(int messageTimeout) {
-        setTimeout(messageTimeout * 2);
+    public void exponentialBackOff() {
+        long timeout = getTimeout();
+        setTimeout(Math.min(timeout * 2, Link.MAX_TIMEOUT));
     }
 
     /**
@@ -271,18 +299,26 @@ public class HostInfo {
      *
      * @param messageTimeout The reported timeout, in ms.
      */
-    private void setTimeout(int messageTimeout) {
+    private void setTimeout(long messageTimeout) {
         synchronized (lastRTTs) {
             lastRTTs.poll();
             lastRTTs.add(messageTimeout);
-            int newTimeout = 0;
-            for (Integer t: lastRTTs) {
+            long newTimeout = 0;
+            for (Long t: lastRTTs) {
                 newTimeout += t;
             }
             newTimeout /= lastRTTs.size();
             newTimeout += 50;
             currentTimeout.set(newTimeout);
-            System.err.println(newTimeout);
         }
+    }
+
+    public int getNewPacketNumber() {
+        int number;
+        synchronized (packetNumbersSent) {
+            number = 1 + packetNumbersSent.getStateOfVc();
+            packetNumbersSent.addMember(number);
+        }
+        return number;
     }
 }

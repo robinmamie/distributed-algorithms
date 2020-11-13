@@ -4,9 +4,12 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import cs451.link.AbstractLink;
+import cs451.link.HostInfo;
 import cs451.link.Link;
 import cs451.listener.BListener;
 import cs451.message.Message;
+import cs451.message.Packet;
 import cs451.parser.Host;
 
 /**
@@ -40,7 +43,7 @@ class BEBroadcast implements Broadcast {
     /**
      * The waiting queue of messages delivered by the link layer.
      */
-    private final BlockingQueue<Message> toHandle = new LinkedBlockingQueue<>(Link.WINDOW_SIZE);
+    private final BlockingQueue<Packet> toHandle = new LinkedBlockingQueue<>();
 
     /**
      * Builds a best effort broadcaster.
@@ -64,9 +67,9 @@ class BEBroadcast implements Broadcast {
      *
      * @param message The message to be delivered
      */
-    private void deliver(Message message) {
+    private void deliver(Packet packet) {
         try {
-            toHandle.put(message);
+            toHandle.put(packet);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -102,15 +105,21 @@ class BEBroadcast implements Broadcast {
      * instance.
      */
     public void run() {
-        Message message;
+        Packet packet;
         while (true) {
             try {
-                message = toHandle.take();
+                packet = toHandle.take();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return;
             }
-            deliver.apply(message);
+            for (Message message: packet.getMessages()) {
+                HostInfo hostInfo = AbstractLink.getHostInfo(message.getLastHop());
+                if (!hostInfo.isDelivered(message)) {
+                    hostInfo.markDelivered(message);
+                    deliver.apply(message);
+                }
+            }
         }
     }
 }

@@ -29,7 +29,7 @@ class FairLossLink extends AbstractLink {
      * The sending queue, which avoids concurrency on the sending part of the
      * socket.
      */
-    private final BlockingQueue<DatagramPacket> sendQueue = new LinkedBlockingQueue<>(Link.WINDOW_SIZE);
+    private final BlockingQueue<DatagramPacket> sendQueue = new LinkedBlockingQueue<>();
 
     /**
      * Create a fair-loss link.
@@ -60,9 +60,8 @@ class FairLossLink extends AbstractLink {
     }
 
     public void send(Packet packet, int hostId) {
+        byte[] buf = packet.changeLastHop(getMyId()).serialize();
         HostInfo host = getHostInfo(hostId);
-        packet = packet.changeLastHop(getMyId());
-        byte[] buf = packet.serialize();
         try {
             sendQueue.put(new DatagramPacket(buf, buf.length, host.getAddress(), host.getPort()));
         } catch (InterruptedException e) {

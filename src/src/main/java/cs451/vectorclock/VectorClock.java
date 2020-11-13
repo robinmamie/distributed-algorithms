@@ -22,9 +22,10 @@ public class VectorClock {
      * to the VectorClock.
      *
      * @param e The new element to be added.
+     * @return True if the element was absent, false otherwise.
      */
-    public void addMember(int e) {
-        range.add(e);
+    public boolean addMember(int e) {
+        return range.add(e);
     }
 
     /**
@@ -43,7 +44,11 @@ public class VectorClock {
      *
      * @return The current value of the VectorClock.
      */
-    public long getStateOfVc() {
+    public int getStateOfVc() {
         return range.endOfFirstRange();
+    }
+
+    public MessageRange getRange() {
+        return range;
     }
 }

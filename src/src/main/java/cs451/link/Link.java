@@ -2,7 +2,7 @@ package cs451.link;
 
 import java.util.List;
 
-import cs451.listener.BListener;
+import cs451.listener.PListener;
 import cs451.message.Message;
 import cs451.parser.Host;
 
@@ -15,12 +15,17 @@ public interface Link {
     /**
      * The number of messages to be sent at a maximum, for all hosts.
      */
-    public static final int WINDOW_SIZE = 1 << 6;
+    public static final int WINDOW_SIZE = 1 << 10;
 
     /**
      * The base timeout value for lost messages, in milliseconds.
      */
-    public static final long TIMEOUT_MS = 1000;
+    public static final long TIMEOUT_MS = 2000;
+
+    /**
+     * The maximum timeout value for lost messages, in milliseconds.
+     */
+    public static final long MAX_TIMEOUT = TIMEOUT_MS << 2;
 
     /**
      * Send a message through a link.
@@ -49,7 +54,7 @@ public interface Link {
      *
      * @return The newly created (Perfect)Link.
      */
-    static Link getLink(int port, List<Host> hosts, BListener listener, int myId) {
+    static Link getLink(int port, List<Host> hosts, PListener listener, int myId) {
         return new PerfectLink(port, hosts, listener, myId);
     }
 }

@@ -73,7 +73,7 @@ public abstract class AbstractLink implements Link {
 
     /**
      * The constructor of the AbstractLink, creating empty host information if it is
-     * called for the first time. Used for the low-level link, fair-loss link.
+     * called for the first time.
      *
      * @param listener The listener to call once a packet is delivered.
      * @param myId     The ID of the local host.

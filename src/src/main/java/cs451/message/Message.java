@@ -44,14 +44,15 @@ public class Message {
     }
 
     /**
-     * Create a new message by changing the last hop of this message, generally with
-     * the local host ID.
+     * Create a new message from scratch.
      *
-     * @param id The new ID of the last hop.
+     * @param originId  The origin ID of the message.
+     * @param messageId The message ID of the message.
+     * @param lastHop The last hop of the message.
      * @return The newly created message.
      */
-    public Message changeLastHop(int id) {
-        return new Message(originId, messageId, id);
+    public static Message createMessage(int originId, int messageId, int lastHop) {
+        return new Message(originId, messageId, lastHop);
     }
 
     /**
