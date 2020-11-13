@@ -1,7 +1,8 @@
 package cs451.message;
 
-import java.util.LinkedList;
 import java.util.List;
+
+import cs451.listener.BListener;
 
 /**
  * Abstraction for a network message.
@@ -19,6 +20,12 @@ public class Packet {
     private static final int LAST_HOP_OFFSET = 12;
     private static final int ACK_OFFSET = 13;
     static final int CONTENTS_OFFSET = 14;
+
+    /**
+     * The maximum number of messages that can be concatenated inside a packet.
+     */
+    public static final int MESSAGES_PER_PACKET = (MAX_PAYLOAD_SIZE - CONTENTS_OFFSET) / (1 + 4);
+
 
     /**
      * The last hop of the message, i.e. the ID of the host that sent it (this is
@@ -138,22 +145,18 @@ public class Packet {
     }
 
     /**
-     * Get the list of messages of this packet.
-     *
-     * @return The list of messages included in this packet.
+     * Get the list of messages of this packet and apply the given function on each message.
      */
-    public List<Message> getMessages() {
-        List<Message> messages = new LinkedList<>();
+    public void deliverMessages(BListener toExecute) {
         int pointerOrigin = CONTENTS_OFFSET;
         int pointerId = CONTENTS_OFFSET + nbMessages;
         for (int i = 0; i < nbMessages; ++i) {
             byte originId = datagram[pointerOrigin];
             int messageId = ByteOp.byteToInt(datagram, pointerId);
-            messages.add(Message.createMessage(originId, messageId, getLastHop()));
+            toExecute.apply(Message.createMessage(originId, messageId, getLastHop()));
             pointerOrigin += 1;
             pointerId += 4;
         }
-        return messages;
     }
 
     /**

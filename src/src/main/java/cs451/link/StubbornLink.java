@@ -115,7 +115,7 @@ class StubbornLink extends AbstractLink {
     private void emptyWaitingQueue(int hostId, HostInfo host) {
         List<Message> messages = new LinkedList<>();
         if (host.canSendWaitingMessages()) {
-            for (int i = 0; i < 10000; ++i) {
+            for (int i = 0; i < Packet.MESSAGES_PER_PACKET; ++i) {
                 Message m = host.getNextWaitingMessage();
                 if (m == null) {
                     break;

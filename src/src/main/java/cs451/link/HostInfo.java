@@ -239,7 +239,7 @@ public class HostInfo {
      * @return Whether we can send a new message.
      */
     public boolean canSendWaitingMessages() {
-        return packetNumbersSent.getStateOfVc() - myPacketNumberDelivered.getStateOfVc() < windowSize;//stubbornQueue.size() < windowSize;
+        return stubbornQueue.size() < windowSize;//packetNumbersSent.getStateOfVc() - myPacketNumberDelivered.getStateOfVc() < windowSize;
     }
 
     /**

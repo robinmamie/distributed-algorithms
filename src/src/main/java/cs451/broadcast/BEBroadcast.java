@@ -4,18 +4,20 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import cs451.link.AbstractLink;
-import cs451.link.HostInfo;
 import cs451.link.Link;
 import cs451.listener.BListener;
 import cs451.message.Message;
-import cs451.message.Packet;
 import cs451.parser.Host;
 
 /**
  * Best effort broadcast abstraction.
  */
 class BEBroadcast implements Broadcast {
+
+    /**
+     * The maximum number of messages that can wait in the BEB-deliver buffer.
+     */
+    private static final int MAX_BUFFER_SIZE = 1 << 17;
 
     /**
      * The list of hosts, used during the broadcast phase
@@ -43,7 +45,7 @@ class BEBroadcast implements Broadcast {
     /**
      * The waiting queue of messages delivered by the link layer.
      */
-    private final BlockingQueue<Packet> toHandle = new LinkedBlockingQueue<>();
+    private final BlockingQueue<Message> toHandle = new LinkedBlockingQueue<>(MAX_BUFFER_SIZE);
 
     /**
      * Builds a best effort broadcaster.
@@ -67,9 +69,9 @@ class BEBroadcast implements Broadcast {
      *
      * @param message The message to be delivered
      */
-    private void deliver(Packet packet) {
+    private void deliver(Message message) {
         try {
-            toHandle.put(packet);
+            toHandle.put(message);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -105,21 +107,15 @@ class BEBroadcast implements Broadcast {
      * instance.
      */
     public void run() {
-        Packet packet;
+        Message message;
         while (true) {
             try {
-                packet = toHandle.take();
+                message = toHandle.take();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return;
             }
-            for (Message message: packet.getMessages()) {
-                HostInfo hostInfo = AbstractLink.getHostInfo(message.getLastHop());
-                if (!hostInfo.isDelivered(message)) {
-                    hostInfo.markDelivered(message);
-                    deliver.apply(message);
-                }
-            }
+            deliver.apply(message);
         }
     }
 }

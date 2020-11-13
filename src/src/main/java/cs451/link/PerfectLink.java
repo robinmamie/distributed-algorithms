@@ -2,7 +2,7 @@ package cs451.link;
 
 import java.util.List;
 
-import cs451.listener.PListener;
+import cs451.listener.BListener;
 import cs451.message.Message;
 import cs451.message.Packet;
 import cs451.parser.Host;
@@ -25,7 +25,7 @@ class PerfectLink extends AbstractLink {
      * @param listener The listener to call once a message is delivered.
      * @param myId     The ID of the local host.
      */
-    public PerfectLink(int port, List<Host> hosts, PListener listener, int myId) {
+    public PerfectLink(int port, List<Host> hosts, BListener listener, int myId) {
         super(listener, myId, hosts);
         this.sLink = new StubbornLink(port, hosts, this::deliver, myId);
     }
@@ -49,7 +49,12 @@ class PerfectLink extends AbstractLink {
         HostInfo hostInfo = getHostInfo(packet.getLastHop());
         if (!hostInfo.isDelivered(packet)) {
             hostInfo.markDelivered(packet);
-            handleListener(packet);
+            packet.deliverMessages(message -> {
+                if (!hostInfo.isDelivered(message)) {
+                    hostInfo.markDelivered(message);
+                    handleListener(message);
+                }
+            });
         }
     }
 }

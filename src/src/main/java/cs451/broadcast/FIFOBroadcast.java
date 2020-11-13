@@ -96,10 +96,5 @@ class FIFOBroadcast implements Broadcast {
             }
             deliver.apply(Message.createMessage(origin, i));
         }
-        if (startTime == 0) {
-            startTime = System.nanoTime();
-        }
-        System.err.println(System.nanoTime() - startTime);
     }
-    private long startTime = 0;
 }
