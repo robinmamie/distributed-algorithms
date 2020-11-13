@@ -148,6 +148,7 @@ public class BroadcastHandler {
             return Integer.parseInt(line);
         } catch (IOException e) {
             System.err.println("Problem with the config file!");
+            return 0;
         }
     }
 }
