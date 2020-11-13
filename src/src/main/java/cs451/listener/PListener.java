@@ -7,6 +7,7 @@ import cs451.message.Packet;
  */
 @FunctionalInterface
 public interface PListener {
+
     /**
      * Deliver, or apply the list of messages to the given function.
      *

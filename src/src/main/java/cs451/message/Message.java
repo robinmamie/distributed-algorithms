@@ -23,7 +23,7 @@ public class Message {
     private final int messageId;
 
     private Message(int originId, int messageId, int lastHop) {
-        this((byte)originId, messageId, (byte)lastHop);
+        this((byte) originId, messageId, (byte) lastHop);
     }
 
     private Message(byte originId, int messageId, byte lastHop) {
@@ -48,7 +48,7 @@ public class Message {
      *
      * @param originId  The origin ID of the message.
      * @param messageId The message ID of the message.
-     * @param lastHop The last hop of the message.
+     * @param lastHop   The last hop of the message.
      * @return The newly created message.
      */
     public static Message createMessage(int originId, int messageId, int lastHop) {

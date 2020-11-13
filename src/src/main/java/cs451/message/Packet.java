@@ -24,9 +24,9 @@ public class Packet {
     private static final int CONTENTS_OFFSET = 14;
 
     /**
-     * The number of bytes used by a message inside the packet. 1 byte for the
-     * host ID (because it is between 1 and 128), 4 for the message ID (because
-     * it is between 1 and MAX_INT).
+     * The number of bytes used by a message inside the packet. 1 byte for the host
+     * ID (because it is between 1 and 128), 4 for the message ID (because it is
+     * between 1 and MAX_INT).
      */
     private static final int SIZE_OF_MESSAGE = 5;
 
@@ -75,21 +75,21 @@ public class Packet {
     }
 
     private Packet(List<Message> messages, int packetNumber, byte lastHop, boolean ack, int timestamp) {
-        int nbMessages = messages.size();
-        byte[] datagram = new byte[CONTENTS_OFFSET + 5*nbMessages];
-        ByteOp.intToByte(nbMessages, datagram, NB_MESSAGES_OFFSET);
-        ByteOp.intToByte(packetNumber, datagram, PACKET_NUMBER_OFFSET);
-        ByteOp.intToByte(timestamp, datagram, TIMESTAMP_OFFSET);
-        datagram[LAST_HOP_OFFSET] = lastHop;
-        datagram[ACK_OFFSET] = (byte) (ack ? 1 : 0);
+        int nbMessage = messages.size();
+        byte[] data = new byte[CONTENTS_OFFSET + 5 * nbMessage];
+        ByteOp.intToByte(nbMessage, data, NB_MESSAGES_OFFSET);
+        ByteOp.intToByte(packetNumber, data, PACKET_NUMBER_OFFSET);
+        ByteOp.intToByte(timestamp, data, TIMESTAMP_OFFSET);
+        data[LAST_HOP_OFFSET] = lastHop;
+        data[ACK_OFFSET] = (byte) (ack ? 1 : 0);
 
         int pointerOrigin = CONTENTS_OFFSET;
-        int pointerId = CONTENTS_OFFSET + nbMessages;
+        int pointerId = CONTENTS_OFFSET + nbMessage;
         for (Message m : messages) {
             // NB: the byte layout is optimized for an eventual compression of
             // the data. However, every characteristic of the message is present.
-            datagram[pointerOrigin] = (byte) m.getOriginId();
-            ByteOp.intToByte(m.getMessageId(), datagram, pointerId);
+            data[pointerOrigin] = (byte) m.getOriginId();
+            ByteOp.intToByte(m.getMessageId(), data, pointerId);
             pointerOrigin += 1;
             pointerId += 4;
         }
@@ -98,8 +98,8 @@ public class Packet {
         this.lastHop = lastHop;
         this.ack = ack;
         this.timestampMs = timestamp;
-        this.datagram = datagram;
-        this.nbMessages = nbMessages;
+        this.datagram = data;
+        this.nbMessages = nbMessage;
     }
 
     private Packet(byte[] datagram, int nbMessages, int packetNumber, byte lastHop, boolean ack, int timestamp) {
@@ -115,8 +115,8 @@ public class Packet {
      * Create a new packet from scratch.
      *
      * @param message The list of messages of this packet.
-     * @param lastHop The last hop of this packet (generally speaking, the ID of
-     *                the local host).
+     * @param lastHop The last hop of this packet (generally speaking, the ID of the
+     *                local host).
      * @return The newly created packet.
      */
     public static Packet createPacket(List<Message> messages, int packetNumber, int lastHop) {
@@ -124,8 +124,8 @@ public class Packet {
     }
 
     /**
-     * Create a new packet that is an acknowledgement of the current one. Change
-     * the last hop with a new value, generally with the local host ID.
+     * Create a new packet that is an acknowledgement of the current one. Change the
+     * last hop with a new value, generally with the local host ID.
      *
      * @param id The new ID of the last hop.
      * @return The newly created packet.
@@ -164,7 +164,8 @@ public class Packet {
     }
 
     /**
-     * Get the list of messages of this packet and apply the given function on each message.
+     * Get the list of messages of this packet and apply the given function on each
+     * message.
      */
     public void deliverMessages(BListener toExecute) {
         int pointerOrigin = CONTENTS_OFFSET;
@@ -180,6 +181,7 @@ public class Packet {
 
     /**
      * Get the packet number.
+     * 
      * @return The packet number.
      */
     public int getPacketNumber() {
@@ -217,7 +219,8 @@ public class Packet {
 
     @Override
     public String toString() {
-        return "Packet-" + (ack ? "Ack" : "Message") + " contains " + nbMessages + " messages, id " + packetNumber + " | last hop " + lastHop;
+        return "Packet-" + (ack ? "Ack" : "Message") + " contains " + nbMessages + " messages, id " + packetNumber
+                + " | last hop " + lastHop;
     }
 
     /**
@@ -242,7 +245,7 @@ public class Packet {
         byte lastHop = datagram[LAST_HOP_OFFSET];
         boolean ack = datagram[ACK_OFFSET] != 0;
 
-        return new Packet(Arrays.copyOfRange(datagram, 0, CONTENTS_OFFSET+SIZE_OF_MESSAGE*nbMessages),
-                            nbMessages, packetNumber, lastHop, ack, timestamp);
+        return new Packet(Arrays.copyOfRange(datagram, 0, CONTENTS_OFFSET + SIZE_OF_MESSAGE * nbMessages), nbMessages,
+                packetNumber, lastHop, ack, timestamp);
     }
 }

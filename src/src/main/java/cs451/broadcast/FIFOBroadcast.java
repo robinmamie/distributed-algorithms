@@ -86,9 +86,9 @@ class FIFOBroadcast implements Broadcast {
         int messageId = message.getMessageId();
 
         // Check if new messages can be delivered.
-        int start = (int) delivered.get(origin).getStateOfVc();
+        int start = delivered.get(origin).getStateOfVc();
         delivered.get(origin).addMember(messageId);
-        int end = (int) delivered.get(origin).getStateOfVc();
+        int end = delivered.get(origin).getStateOfVc();
 
         // Reconstruct all buffered messages.
         for (int i = start + 1; i <= end; ++i) {

@@ -93,8 +93,7 @@ class StubbornLink extends AbstractLink {
         List<WaitingPacket> wps = host.getNextStubbornPackets();
         for (WaitingPacket wp : wps) {
             if (!host.isMineDelivered(wp.getPacket())) {
-                WaitingPacket newWp =
-                    wp.resendIfTimedOut(() -> fLink.send(wp.getPacket().resetTimestamp(), hostId));
+                WaitingPacket newWp = wp.resendIfTimedOut(() -> fLink.send(wp.getPacket().resetTimestamp(), hostId));
                 try {
                     host.addPacketToConfirm(newWp);
                 } catch (InterruptedException e) {

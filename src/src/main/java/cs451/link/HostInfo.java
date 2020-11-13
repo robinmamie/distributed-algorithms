@@ -47,7 +47,7 @@ public class HostInfo {
     /**
      * The number of RTTs saved for the timeout computation.
      */
-    private final int SAVED_RTTS = 5;
+    private static final int SAVED_RTTS = 5;
 
     /**
      * The list of the last SAVED_RTTS for the timeout computation.
@@ -85,15 +85,15 @@ public class HostInfo {
     private final AtomicInteger packetNumbersSent = new AtomicInteger(0);
 
     /**
-     * The vector clock of packet numbers originating from the local host and
-     * that have been delivered by the distant host. Used to stop stubbornly
-     * resending packets.
+     * The vector clock of packet numbers originating from the local host and that
+     * have been delivered by the distant host. Used to stop stubbornly resending
+     * packets.
      */
     private final VectorClock myPacketNumberDelivered = new VectorClock();
 
     /**
-     * The vector clock of packet numbers originating from the distant host and
-     * that have been locally delivered.
+     * The vector clock of packet numbers originating from the distant host and that
+     * have been locally delivered.
      */
     private final VectorClock theirPacketNumberDelivered = new VectorClock();
 
@@ -156,11 +156,10 @@ public class HostInfo {
      * @return Whether the given packet was already delivered.
      */
     public boolean isDelivered(Packet p) {
-        return p.isAck() ?
-                myPacketNumberDelivered.contains(p.getPacketNumber()) :
-                theirPacketNumberDelivered.contains(p.getPacketNumber());
+        return p.isAck() ? myPacketNumberDelivered.contains(p.getPacketNumber())
+                : theirPacketNumberDelivered.contains(p.getPacketNumber());
     }
-    
+
     /**
      * Check whether a given packet was already delivered, coming from this host.
      *
@@ -216,10 +215,11 @@ public class HostInfo {
 
     /**
      * Atomically return a new packet number.
+     * 
+     * @return A new packet number.
      */
     public int getNewPacketNumber() {
-        int number = packetNumbersSent.incrementAndGet();
-        return number;
+        return packetNumbersSent.incrementAndGet();
     }
 
     /**
@@ -272,7 +272,7 @@ public class HostInfo {
      */
     public Message getNextWaitingMessage() {
         int nextHost = 1;
-        int mId = Integer.MIN_VALUE;
+        int mId;
         for (int i = 1; i <= numHosts; ++i) {
             nextHost = nextOriginToSend;
             if (nextOriginToSend == numHosts) {
@@ -298,8 +298,8 @@ public class HostInfo {
     }
 
     /**
-     * Reset the value of this host's timeout by adding the reported RTT to the
-     * list of most recent RTTs for this host.
+     * Reset the value of this host's timeout by adding the reported RTT to the list
+     * of most recent RTTs for this host.
      * 
      * @param packet The packet reporting the timeout.
      */
@@ -308,8 +308,8 @@ public class HostInfo {
     }
 
     /**
-     * Add double the actual timeout to the list of most recent RTTs for this
-     * host. This method will therefore not actually double the actual RTT.
+     * Add double the actual timeout to the list of most recent RTTs for this host.
+     * This method will therefore not actually double the actual RTT.
      */
     public void exponentialBackOff() {
         long timeout = getTimeout();
@@ -326,7 +326,7 @@ public class HostInfo {
             lastRTTs.poll();
             lastRTTs.add(messageTimeout);
             long newTimeout = 0;
-            for (Long t: lastRTTs) {
+            for (Long t : lastRTTs) {
                 newTimeout += t;
             }
             newTimeout /= lastRTTs.size();

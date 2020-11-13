@@ -7,6 +7,7 @@ import cs451.message.Message;
  */
 @FunctionalInterface
 public interface BListener {
+
     /**
      * Deliver, or apply the message to the given function.
      *

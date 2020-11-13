@@ -32,11 +32,11 @@ public abstract class AbstractLink implements Link {
      * The listener to be called once a message is delivered.
      */
     private final BListener bListener;
-    
+
     /**
-    * The listener to be called once a packet is delivered.
-    */
-   private final PListener pListener;
+     * The listener to be called once a packet is delivered.
+     */
+    private final PListener pListener;
 
     /**
      * The ID of the local host.
