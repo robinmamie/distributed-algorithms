@@ -202,8 +202,9 @@ class FifoBroadcastValidation(Validation):
         return True
 
 class LCausalBroadcastValidation(Validation):
-    def __init__(self, processes, outputDir, causalRelationships):
-        super().__init__(processes, outputDir)
+    def __init__(self, processes, messages, outputDir, extraParameter):
+        super().__init__(processes, messages, outputDir)
+        # Use the `extraParameter` to pass any information you think is relevant
 
     def generateConfig(self):
         raise NotImplementedError()
@@ -360,6 +361,8 @@ def main(processes, messages, runscript, broadcastType, logsDir, testConfig):
     if broadcastType == "fifo":
         validation = FifoBroadcastValidation(processes, messages, logsDir)
     else:
+        # Use the last argument (now it's `None` since it's not being use) to
+        # pass any information that you think is relevant
         validation = LCausalBroadcastValidation(processes, messages, logsDir, None)
 
     hostsFile, configFile = validation.generateConfig()
