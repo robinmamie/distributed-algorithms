@@ -182,9 +182,9 @@ For your submissions, we are only interested in the FIFO and Localized Causal br
 m
 1 4 5
 2 1
+3 1 2
 4
 5 3 4
-3 1 2
 ```
 *Note*: Lines should end in `\n`, and numbers are separated by white-space characters.
 
