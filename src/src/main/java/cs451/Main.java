@@ -53,17 +53,16 @@ public class Main {
         Coordinator coordinator = new Coordinator(parser.myId(), parser.barrierIp(), parser.barrierPort(),
                 parser.signalIp(), parser.signalPort());
 
-        final boolean fifo = true;
+        final boolean lcausal = false;
 
-        BroadcastHandler.create(fifo, parser, coordinator);
+        BroadcastHandler.create(lcausal, parser, coordinator);
 
         System.out.println("Waiting for all processes for finish initialization");
         coordinator.waitOnBarrier();
 
         System.out.println("Broadcasting messages...");
 
-        // Handle the entire FIFO-broadcast
-        BroadcastHandler.start(fifo);
+        BroadcastHandler.start(lcausal);
 
         while (true) {
             // Sleep for 1 hour

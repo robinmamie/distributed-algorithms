@@ -1,5 +1,9 @@
 package cs451.message;
 
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+
 /**
  * Abstraction for a network message.
  */
@@ -22,14 +26,21 @@ public class Message {
      */
     private final int messageId;
 
+    private final List<Integer> dependencies;
+
     private Message(int originId, int messageId, int lastHop) {
-        this((byte) originId, messageId, (byte) lastHop);
+        this((byte) originId, messageId, (byte) lastHop, new LinkedList<>());
     }
 
-    private Message(byte originId, int messageId, byte lastHop) {
+    private Message(Message message, List<Integer> dependencies) {
+        this(message.originId, message.messageId, message.lastHop, dependencies);
+    }
+
+    private Message(byte originId, int messageId, byte lastHop, List<Integer> dependencies) {
         this.originId = originId;
         this.messageId = messageId;
         this.lastHop = lastHop;
+        this.dependencies = Collections.unmodifiableList(new LinkedList<>(dependencies));
     }
 
     /**
@@ -53,6 +64,23 @@ public class Message {
      */
     public static Message createMessage(int originId, int messageId, int lastHop) {
         return new Message(originId, messageId, lastHop);
+    }
+
+    /**
+     * Create a new message from scratch.
+     *
+     * @param originId     The origin ID of the message.
+     * @param messageId    The message ID of the message.
+     * @param lastHop      The last hop of the message.
+     * @param dependencies The list of causality dependencies.
+     * @return The newly created message.
+     */
+    public static Message createMessage(int originId, int messageId, int lastHop, List<Integer> dependencies) {
+        return new Message((byte) originId, messageId, (byte) lastHop, dependencies);
+    }
+
+    public Message addCausality(List<Integer> dependencies) {
+        return new Message(this, dependencies);
     }
 
     /**
@@ -84,8 +112,17 @@ public class Message {
         return (int) lastHop & 0xFF;
     }
 
+    public List<Integer> getDependencies() {
+        return dependencies;
+    }
+
     @Override
     public String toString() {
-        return "Message" + " #" + messageId + " from " + originId + " | last hop " + lastHop;
+        StringBuilder sb = new StringBuilder();
+        sb.append("Message" + " #" + messageId + " from " + originId + " | last hop " + lastHop + " | dep: ");
+        for (int e : dependencies) {
+            sb.append(e).append(" ");
+        }
+        return sb.toString();
     }
 }
