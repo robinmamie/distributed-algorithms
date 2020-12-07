@@ -31,7 +31,7 @@ public class HostInfo {
      * The queue of waiting messages, to be emptied once the stubborn queue is small
      * enough, i.e. smaller than the window size.
      */
-    private final Map<Integer, MessageRange> waitingQueue = new TreeMap<>();
+    private final Map<Integer, BlockingQueue<Message>> waitingQueue = new TreeMap<>();
 
     /**
      * The messages already delivered from this host, i.e. messages that had this
@@ -113,7 +113,7 @@ public class HostInfo {
         this.windowSize = Math.max(1, Link.WINDOW_SIZE / numHosts / 2);
         this.numHosts = numHosts;
         for (int i = 1; i <= numHosts; ++i) {
-            waitingQueue.put(i, new MessageRange());
+            waitingQueue.put(i, new LinkedBlockingQueue<>());
             delivered.put(i, new MessageRange());
         }
         for (int i = 0; i < SAVED_RTTS; i++) {
@@ -239,7 +239,11 @@ public class HostInfo {
      * @param message The message to add to the waiting list.
      */
     public void addMessageInWaitingList(Message message) {
-        waitingQueue.get(message.getOriginId()).add(message.getMessageId());
+        try {
+            waitingQueue.get(message.getOriginId()).put(message);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**
@@ -251,7 +255,7 @@ public class HostInfo {
      *                 messages to broadcast).
      */
     public void sendRange(int originId, int a, int b) {
-        waitingQueue.get(originId).setRange(a, b);
+        throw new RuntimeException("Obsolete FIFO implementation.");
     }
 
     /**
@@ -272,7 +276,7 @@ public class HostInfo {
      */
     public Message getNextWaitingMessage() {
         int nextHost = 1;
-        int mId;
+        Message message;
         for (int i = 1; i <= numHosts; ++i) {
             nextHost = nextOriginToSend;
             if (nextOriginToSend == numHosts) {
@@ -280,9 +284,9 @@ public class HostInfo {
             } else {
                 nextOriginToSend += 1;
             }
-            mId = waitingQueue.get(nextHost).poll();
-            if (0 < mId) {
-                return Message.createMessage(nextHost, mId);
+            message = waitingQueue.get(nextHost).poll();
+            if (message != null) {
+                return message;
             }
         }
         return null;

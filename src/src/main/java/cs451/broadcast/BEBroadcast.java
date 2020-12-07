@@ -100,7 +100,6 @@ class BEBroadcast implements Broadcast {
                 link.sendRange(host.getId(), myId, numberOfMessages);
             }
         }
-        run();
     }
 
     /**

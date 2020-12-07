@@ -1,6 +1,6 @@
 package cs451.message;
 
-import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 import cs451.listener.BListener;
@@ -14,6 +14,8 @@ public class Packet {
      * The maximum number of bytes authorized for the payload of a given UDP packet.
      */
     public static final int MAX_PAYLOAD_SIZE = 65507;
+    public static final int BASIC_MESSAGE_SIZE = 5;
+    public static final int SAFE_MAX_PAYLOAD_SIZE = MAX_PAYLOAD_SIZE - 127 * Integer.BYTES - BASIC_MESSAGE_SIZE;
 
     // Byte offsets used for the byte datagram.
     private static final int NB_MESSAGES_OFFSET = 0;
@@ -21,19 +23,14 @@ public class Packet {
     private static final int TIMESTAMP_OFFSET = 8;
     private static final int LAST_HOP_OFFSET = 12;
     private static final int ACK_OFFSET = 13;
-    private static final int CONTENTS_OFFSET = 14;
+    public static final int CONTENTS_OFFSET = 14;
 
     /**
      * The number of bytes used by a message inside the packet. 1 byte for the host
      * ID (because it is between 1 and 128), 4 for the message ID (because it is
      * between 1 and MAX_INT).
      */
-    private static final int SIZE_OF_MESSAGE = 5;
-
-    /**
-     * The maximum number of messages that can be concatenated inside a packet.
-     */
-    public static final int MAX_MESSAGES_PER_PACKET = (MAX_PAYLOAD_SIZE - CONTENTS_OFFSET) / SIZE_OF_MESSAGE;
+    public static final int SIZE_OF_MESSAGE = 5;
 
     /**
      * The last hop of the message, i.e. the ID of the host that sent it (this is
@@ -76,22 +73,26 @@ public class Packet {
 
     private Packet(List<Message> messages, int packetNumber, byte lastHop, boolean ack, int timestamp) {
         int nbMessage = messages.size();
-        byte[] data = new byte[CONTENTS_OFFSET + 5 * nbMessage];
+        byte[] data = new byte[MAX_PAYLOAD_SIZE];
         ByteOp.intToByte(nbMessage, data, NB_MESSAGES_OFFSET);
         ByteOp.intToByte(packetNumber, data, PACKET_NUMBER_OFFSET);
         ByteOp.intToByte(timestamp, data, TIMESTAMP_OFFSET);
         data[LAST_HOP_OFFSET] = lastHop;
         data[ACK_OFFSET] = (byte) (ack ? 1 : 0);
 
-        int pointerOrigin = CONTENTS_OFFSET;
-        int pointerId = CONTENTS_OFFSET + nbMessage;
+        int pointer = CONTENTS_OFFSET;
         for (Message m : messages) {
-            // NB: the byte layout is optimized for an eventual compression of
-            // the data. However, every characteristic of the message is present.
-            data[pointerOrigin] = (byte) m.getOriginId();
-            ByteOp.intToByte(m.getMessageId(), data, pointerId);
-            pointerOrigin += 1;
-            pointerId += 4;
+            // Information about the message is stored sequentially.
+            data[pointer] = (byte) m.getOriginId();
+            pointer += 1;
+            ByteOp.intToByte(m.getMessageId(), data, pointer);
+            pointer += 4;
+            data[pointer] = (byte) m.getDependencies().size();
+            pointer += 1;
+            for (Integer e : m.getDependencies()) {
+                ByteOp.intToByte(e, data, pointer);
+                pointer += 4;
+            }
         }
 
         this.packetNumber = packetNumber;
@@ -168,14 +169,20 @@ public class Packet {
      * message.
      */
     public void deliverMessages(BListener toExecute) {
-        int pointerOrigin = CONTENTS_OFFSET;
-        int pointerId = CONTENTS_OFFSET + nbMessages;
+        int pointer = CONTENTS_OFFSET;
         for (int i = 0; i < nbMessages; ++i) {
-            byte originId = datagram[pointerOrigin];
-            int messageId = ByteOp.byteToInt(datagram, pointerId);
-            toExecute.apply(Message.createMessage(originId, messageId, getLastHop()));
-            pointerOrigin += 1;
-            pointerId += 4;
+            byte originId = datagram[pointer];
+            pointer += 1;
+            int messageId = ByteOp.byteToInt(datagram, pointer);
+            pointer += 4;
+            int nbDependencies = (int) datagram[pointer] & 0xFF;
+            pointer += 1;
+            List<Integer> dependencies = new LinkedList<>();
+            for (int j = 0; j < nbDependencies; ++j) {
+                dependencies.add(ByteOp.byteToInt(datagram, pointer));
+                pointer += 4;
+            }
+            toExecute.apply(Message.createMessage(originId, messageId, getLastHop(), dependencies));
         }
     }
 
@@ -244,8 +251,6 @@ public class Packet {
         int timestamp = ByteOp.byteToInt(datagram, TIMESTAMP_OFFSET);
         byte lastHop = datagram[LAST_HOP_OFFSET];
         boolean ack = datagram[ACK_OFFSET] != 0;
-
-        return new Packet(Arrays.copyOfRange(datagram, 0, CONTENTS_OFFSET + SIZE_OF_MESSAGE * nbMessages), nbMessages,
-                packetNumber, lastHop, ack, timestamp);
+        return new Packet(datagram, nbMessages, packetNumber, lastHop, ack, timestamp);
     }
 }

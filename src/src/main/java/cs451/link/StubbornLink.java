@@ -114,12 +114,14 @@ class StubbornLink extends AbstractLink {
     private void emptyWaitingQueue(int hostId, HostInfo host) {
         List<Message> messages = new LinkedList<>();
         if (host.canSendWaitingMessages()) {
-            for (int i = 0; i < Packet.MAX_MESSAGES_PER_PACKET; ++i) {
+            int byteCount = Packet.CONTENTS_OFFSET;
+            while (byteCount < Packet.SAFE_MAX_PAYLOAD_SIZE) {
                 Message m = host.getNextWaitingMessage();
                 if (m == null) {
                     break;
                 }
                 messages.add(m);
+                byteCount += Packet.BASIC_MESSAGE_SIZE + m.getDependencies().size();
             }
             if (!messages.isEmpty()) {
                 Packet packet = Packet.createPacket(messages, host.getNewPacketNumber(), getMyId());

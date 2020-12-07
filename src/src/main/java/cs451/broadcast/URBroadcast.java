@@ -3,6 +3,7 @@ package cs451.broadcast;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import cs451.link.AbstractLink;
 import cs451.listener.BListener;
@@ -61,6 +62,8 @@ class URBroadcast implements Broadcast {
         for (Host host : hosts) {
             delivered.put(host.getId(), new VectorClock());
         }
+
+        Executors.newFixedThreadPool(1).execute(beBroadcast::run);
     }
 
     @Override
