@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
 
+import cs451.link.AbstractLink;
+import cs451.link.HostInfo;
 import cs451.message.Message;
 import cs451.parser.Coordinator;
 import cs451.parser.Parser;
@@ -151,8 +153,18 @@ public class BroadcastHandler {
      * Start LCausal-broadcasting messages.
      */
     private static void startLCausal() {
+        Map<Integer, HostInfo> hostInfo = AbstractLink.getHostInfo();
+        int memoryLimit = 20_000 / hostInfo.size();
         for (int i = 1; i <= nbMessagesToBroadcast; ++i) {
             broadcast.broadcast(Message.createMessage(myId, i));
+            if (i % memoryLimit == 0) {
+                try {
+                    Thread.sleep(1000L * hostInfo.size());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
         }
     }
 
@@ -190,7 +202,7 @@ public class BroadcastHandler {
                 try (Scanner scanner = new Scanner(line)) {
                     while (scanner.hasNextInt()) {
                         int process = scanner.nextInt();
-                        if (process != myId) {
+                        if (process != currentId) {
                             list.add(process);
                         }
                     }

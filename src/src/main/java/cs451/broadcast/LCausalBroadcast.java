@@ -1,12 +1,9 @@
 package cs451.broadcast;
 
-import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntConsumer;
 
@@ -25,7 +22,7 @@ public class LCausalBroadcast implements Broadcast {
      * The local message tallying: used to reorder messages that have been
      * URB-delivered.
      */
-    private final Map<Integer, BlockingQueue<Message>> pending = new TreeMap<>();
+    private final Map<Integer, Map<Integer, List<Integer>>> pending = new TreeMap<>();
 
     /**
      * The local message tallying: used to reorder messages that have been
@@ -62,7 +59,7 @@ public class LCausalBroadcast implements Broadcast {
         this.dependencies = dependencies;
 
         for (Host host : hosts) {
-            pending.put(host.getId(), new LinkedBlockingQueue<>());
+            pending.put(host.getId(), new TreeMap<>());
         }
         for (Host host : hosts) {
             delivered.put(host.getId(), new AtomicInteger(0));
@@ -95,36 +92,43 @@ public class LCausalBroadcast implements Broadcast {
      * @param message The message to deliver.
      */
     private void deliver(Message message) {
-        pending.get(message.getOriginId()).add(message);
-        for (Map.Entry<Integer, BlockingQueue<Message>> entry : pending.entrySet()) {
-            List<Message> messages = new LinkedList<>();
-            entry.getValue().drainTo(messages);
-            messages.sort(Comparator.comparing(Message::getMessageId));
-            checkDependency(entry.getKey(), messages);
-        }
+        pending.get(message.getOriginId()).put(message.getMessageId(), message.getDependencies());
+        dependencies.forEach((i, d) -> checkPendingQueue(i));
     }
 
-    private void checkDependency(int originId, List<Message> messages) {
+    private boolean checkPendingQueue(int originId) {
+        Map<Integer, List<Integer>> messages = pending.get(originId);
+
         List<Integer> dependency = dependencies.get(originId);
         int count = 0;
-        for (Message message : messages) {
-            if (message.getMessageId() - 1 != delivered.get(originId).get()) {
-                pending.get(originId).addAll(messages.subList(count, messages.size()));
-                return;
+        int nextIdToDeliver = delivered.get(originId).get();
+        while (!messages.isEmpty()) {
+            nextIdToDeliver += 1;
+            // Messages always depend on themselves
+            if (!messages.containsKey(nextIdToDeliver)) {
+                return count > 0;
             }
+            // Check the dependencies on other processes
             for (int i = 0; i < dependency.size(); ++i) {
                 int deliveredId = delivered.get(dependency.get(i)).get();
-                int requiredId = message.getDependencies().get(i);
+                int requiredId = messages.get(nextIdToDeliver).get(i);
                 if (deliveredId < requiredId) {
-                    pending.get(originId).addAll(messages.subList(count, messages.size()));
-                    return;
+                    return count > 0;
                 }
             }
             synchronized (dependency) {
                 delivered.get(originId).incrementAndGet();
-                deliver.apply(message);
+                deliver.apply(Message.createMessage(originId, nextIdToDeliver));
+                messages.remove(nextIdToDeliver);
+                if (time == 0) {
+                    time = System.nanoTime();
+                }
+                System.err.println(System.nanoTime() - time);
             }
             count += 1;
         }
+        return count > 0;
     }
+
+    private long time = 0;
 }

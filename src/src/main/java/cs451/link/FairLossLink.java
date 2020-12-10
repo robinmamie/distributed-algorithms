@@ -106,14 +106,14 @@ class FairLossLink extends AbstractLink {
      * any concurrency problem.
      */
     private void sendPackets() {
-        try {
-            while (true) {
+        while (true) {
+            try {
                 DatagramPacket packet = sendQueue.take();
                 socket.send(packet);
+            } catch (Exception e) {
+                System.err.println("Cannot send packets! (probably out of memory)");
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            System.err.println("Cannot send packets!");
-            e.printStackTrace();
         }
     }
 }

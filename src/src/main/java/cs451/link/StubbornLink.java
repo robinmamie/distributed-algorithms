@@ -121,7 +121,7 @@ class StubbornLink extends AbstractLink {
                     break;
                 }
                 messages.add(m);
-                byteCount += Packet.BASIC_MESSAGE_SIZE + m.getDependencies().size();
+                byteCount += Packet.BASIC_MESSAGE_SIZE + Packet.SIZE_OF_DEPENDENCY * m.getDependencies().size();
             }
             if (!messages.isEmpty()) {
                 Packet packet = Packet.createPacket(messages, host.getNewPacketNumber(), getMyId());

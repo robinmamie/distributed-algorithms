@@ -339,4 +339,12 @@ public class HostInfo {
             currentTimeout.set(newTimeout);
         }
     }
+
+    public int numberOfWaitingMessages() {
+        int size = 0;
+        for (Map.Entry<Integer, BlockingQueue<Message>> e : waitingQueue.entrySet()) {
+            size += e.getValue().size();
+        }
+        return size;
+    }
 }
