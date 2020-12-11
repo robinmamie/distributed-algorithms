@@ -126,6 +126,7 @@ public class LCausalBroadcast implements Broadcast {
      * Checks the pending messages' queue of the given process.
      *
      * @param originId The given process to check.
+     * @return The number of messages delivered from the given process.
      */
     private int checkPendingQueue(int originId) {
         Map<Integer, List<Integer>> messages = pending.get(originId);
