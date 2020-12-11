@@ -17,6 +17,12 @@ import cs451.parser.Host;
 class StubbornLink extends AbstractLink {
 
     /**
+     * The maximum number of attempts to fill a packet before sending it. This is to
+     * avoid "empty" packets, i.e having only a few messages.
+     */
+    private static final int RETRIEVING_ATTEMPTS = 3;
+
+    /**
      * The underlying fair-loss link.
      */
     private final FairLossLink fLink;
@@ -112,26 +118,60 @@ class StubbornLink extends AbstractLink {
      * @param host   The network information related to the host.
      */
     private void emptyWaitingQueue(int hostId, HostInfo host) {
-        List<Message> messages = new LinkedList<>();
         if (host.canSendWaitingMessages()) {
-            int byteCount = Packet.CONTENTS_OFFSET;
-            while (byteCount < Packet.SAFE_MAX_PAYLOAD_SIZE) {
-                Message m = host.getNextWaitingMessage();
-                if (m == null) {
-                    break;
-                }
-                messages.add(m);
-                byteCount += Packet.BASIC_MESSAGE_SIZE + Packet.SIZE_OF_DEPENDENCY * m.getDependencies().size();
-            }
-            if (!messages.isEmpty()) {
-                Packet packet = Packet.createPacket(messages, host.getNewPacketNumber(), getMyId());
-                fLink.send(packet, hostId);
-                WaitingPacket wpa = new WaitingPacket(packet, host);
+            List<Message> messages = retrieveAListOfMessages(host);
+            createAndSendPacket(messages, hostId, host);
+        }
+    }
+
+    /**
+     * For a given host, retrieve a list of waiting messages.
+     *
+     * @param host The network information related to the host.
+     * @return The retrieved list of waiting messages.
+     */
+    private List<Message> retrieveAListOfMessages(HostInfo host) {
+        List<Message> messages = new LinkedList<>();
+        int byteCount = Packet.CONTENTS_OFFSET;
+        int attempts = 0;
+
+        // Fill a network packet to the maximum safe capacity
+        while (byteCount < Packet.SAFE_MAX_PAYLOAD_SIZE && attempts < RETRIEVING_ATTEMPTS) {
+            Message m = host.getNextWaitingMessage();
+            if (m == null) {
+                // Sleep for a moment, in order to fill the packet to the max
+                attempts += 1;
                 try {
-                    host.addPacketToConfirm(wpa);
+                    Thread.sleep(1);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                    return messages;
                 }
+            } else {
+                messages.add(m);
+                byteCount += Packet.BASIC_MESSAGE_SIZE + Packet.SIZE_OF_DEPENDENCY * m.getDependencies().size();
+                attempts = 0;
+            }
+        }
+        return messages;
+    }
+
+    /**
+     * Creates and sends a packet out of the given list of messages.
+     * 
+     * @param messages The list of message to send in one packet.
+     * @param hostId   The ID of the host.
+     * @param host     The network information related to the host.
+     */
+    private void createAndSendPacket(List<Message> messages, int hostId, HostInfo host) {
+        if (!messages.isEmpty()) {
+            Packet packet = Packet.createPacket(messages, host.getNewPacketNumber(), getMyId());
+            fLink.send(packet, hostId);
+            WaitingPacket wpa = new WaitingPacket(packet, host);
+            try {
+                host.addPacketToConfirm(wpa);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         }
     }

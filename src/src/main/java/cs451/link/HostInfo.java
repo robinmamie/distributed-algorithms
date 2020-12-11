@@ -35,7 +35,7 @@ public class HostInfo {
 
     /**
      * The messages already delivered from this host, i.e. messages that had this
-     * host as last hop.
+     * host as last hop. This is used by the PerfectLink layer.
      */
     private final Map<Integer, MessageRange> delivered = new TreeMap<>();
 
@@ -338,13 +338,5 @@ public class HostInfo {
             newTimeout += 50;
             currentTimeout.set(newTimeout);
         }
-    }
-
-    public int numberOfWaitingMessages() {
-        int size = 0;
-        for (Map.Entry<Integer, BlockingQueue<Message>> e : waitingQueue.entrySet()) {
-            size += e.getValue().size();
-        }
-        return size;
     }
 }

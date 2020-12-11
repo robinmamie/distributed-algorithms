@@ -11,6 +11,11 @@ import cs451.listener.BListener;
 import cs451.message.Message;
 import cs451.parser.Host;
 
+/**
+ * Localized causal broadcast abstraction. Implements the validity, no
+ * duplication, no creation, uniform agreement, FIFO and (localized) causal
+ * properties.
+ */
 public class LCausalBroadcast implements Broadcast {
 
     /**
@@ -20,13 +25,12 @@ public class LCausalBroadcast implements Broadcast {
 
     /**
      * The local message tallying: used to reorder messages that have been
-     * URB-delivered.
+     * URB-delivered. It stores the dependencies mentioned in the message.
      */
     private final Map<Integer, Map<Integer, List<Integer>>> pending = new TreeMap<>();
 
     /**
-     * The local message tallying: used to reorder messages that have been
-     * URB-delivered.
+     * The vector clocks of the current delivery of each process.
      */
     private final Map<Integer, AtomicInteger> delivered = new TreeMap<>();
 
@@ -48,8 +52,23 @@ public class LCausalBroadcast implements Broadcast {
      */
     private final int myId;
 
+    /**
+     * The map of inter-process dependencies.
+     */
     private final Map<Integer, List<Integer>> dependencies;
 
+    /**
+     * 
+     * Create a FIFO broadcast instance.
+     *
+     * @param port              The port number, used to build the underlying link.
+     * @param hosts             The list of hosts, used to broadcast messages.
+     * @param myId              The ID of the local host, to keep track of which
+     *                          local messages are broadcast.
+     * @param deliver           The listener used when a message is delivered.
+     * @param broadcastListener The listener used when a local message is broadcast.
+     * @param dependencies      The map of inter-process dependencies.
+     */
     public LCausalBroadcast(int port, List<Host> hosts, int myId, BListener deliver, IntConsumer broadcastListener,
             Map<Integer, List<Integer>> dependencies) {
         this.urBroadcast = new URBroadcast(port, hosts, myId, this::deliver);
@@ -70,13 +89,14 @@ public class LCausalBroadcast implements Broadcast {
     public void broadcast(Message message) {
         List<Integer> dependencyIds = new LinkedList<>();
         List<Integer> dependency = dependencies.get(myId);
-        // TODO synchronize on delivery!
+
         synchronized (dependency) {
             for (Integer i : dependency) {
                 dependencyIds.add(delivered.get(i).get());
             }
             broadcastListener.accept(message.getMessageId());
         }
+
         message = message.addCausality(dependencyIds);
         urBroadcast.broadcast(message);
     }
@@ -96,39 +116,40 @@ public class LCausalBroadcast implements Broadcast {
         dependencies.forEach((i, d) -> checkPendingQueue(i));
     }
 
-    private boolean checkPendingQueue(int originId) {
+    /**
+     * Checks the pending messages' queue of the given process.
+     *
+     * @param originId The given process to check.
+     */
+    private void checkPendingQueue(int originId) {
         Map<Integer, List<Integer>> messages = pending.get(originId);
 
         List<Integer> dependency = dependencies.get(originId);
-        int count = 0;
         int nextIdToDeliver = delivered.get(originId).get();
+
         while (!messages.isEmpty()) {
             nextIdToDeliver += 1;
-            // Messages always depend on themselves
+
+            // Messages always depend on the process ("FIFO")
             if (!messages.containsKey(nextIdToDeliver)) {
-                return count > 0;
+                return;
             }
-            // Check the dependencies on other processes
+
+            // Check the dependencies on *other* processes (LCausal)
             for (int i = 0; i < dependency.size(); ++i) {
                 int deliveredId = delivered.get(dependency.get(i)).get();
                 int requiredId = messages.get(nextIdToDeliver).get(i);
                 if (deliveredId < requiredId) {
-                    return count > 0;
+                    return;
                 }
             }
+
+            // Deliver next message
             synchronized (dependency) {
                 delivered.get(originId).incrementAndGet();
                 deliver.apply(Message.createMessage(originId, nextIdToDeliver));
-                messages.remove(nextIdToDeliver);
-                if (time == 0) {
-                    time = System.nanoTime();
-                }
-                System.err.println(System.nanoTime() - time);
+                messages.remove(nextIdToDeliver); // garbage collecting
             }
-            count += 1;
         }
-        return count > 0;
     }
-
-    private long time = 0;
 }
