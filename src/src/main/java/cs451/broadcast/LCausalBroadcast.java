@@ -120,8 +120,6 @@ public class LCausalBroadcast implements Broadcast {
                 count += checkPendingQueue(entry.getKey());
             }
         }
-        // dependencies.forEach((i, d) -> checkPendingQueue(i));
-        // dependencies.forEach((i, d) -> checkPendingQueue(i));
     }
 
     /**
