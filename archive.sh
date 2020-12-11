@@ -1,3 +1,4 @@
+#!/bin/bash
 SCIPER=257234
 
 cd src
@@ -5,7 +6,7 @@ cd src
 cd ..
 cp -r src $SCIPER
 cd $SCIPER
-rm -r .settings/ .classpath .gitignore .project target
+rm -r .settings/ .classpath .gitignore .project target config hosts bin/da_proc.jar *.txt
 cd ..
 zip -r $SCIPER.zip $SCIPER
 rm -r $SCIPER

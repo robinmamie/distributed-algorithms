@@ -90,7 +90,7 @@ public class LCausalBroadcast implements Broadcast {
         List<Integer> dependencyIds = new LinkedList<>();
         List<Integer> dependency = dependencies.get(myId);
 
-        synchronized (dependency) {
+        synchronized (dependencies) {
             for (Integer i : dependency) {
                 dependencyIds.add(delivered.get(i).get());
             }
@@ -113,7 +113,15 @@ public class LCausalBroadcast implements Broadcast {
      */
     private void deliver(Message message) {
         pending.get(message.getOriginId()).put(message.getMessageId(), message.getDependencies());
-        dependencies.forEach((i, d) -> checkPendingQueue(i));
+        int count = 1;
+        while (count > 0) {
+            count = 0;
+            for (Map.Entry<Integer, List<Integer>> entry : dependencies.entrySet()) {
+                count += checkPendingQueue(entry.getKey());
+            }
+        }
+        // dependencies.forEach((i, d) -> checkPendingQueue(i));
+        // dependencies.forEach((i, d) -> checkPendingQueue(i));
     }
 
     /**
@@ -121,18 +129,18 @@ public class LCausalBroadcast implements Broadcast {
      *
      * @param originId The given process to check.
      */
-    private void checkPendingQueue(int originId) {
+    private int checkPendingQueue(int originId) {
         Map<Integer, List<Integer>> messages = pending.get(originId);
 
         List<Integer> dependency = dependencies.get(originId);
         int nextIdToDeliver = delivered.get(originId).get();
-
+        int nbMessagesDelivered = 0;
         while (!messages.isEmpty()) {
             nextIdToDeliver += 1;
 
             // Messages always depend on the process ("FIFO")
             if (!messages.containsKey(nextIdToDeliver)) {
-                return;
+                return nbMessagesDelivered;
             }
 
             // Check the dependencies on *other* processes (LCausal)
@@ -140,16 +148,18 @@ public class LCausalBroadcast implements Broadcast {
                 int deliveredId = delivered.get(dependency.get(i)).get();
                 int requiredId = messages.get(nextIdToDeliver).get(i);
                 if (deliveredId < requiredId) {
-                    return;
+                    return nbMessagesDelivered;
                 }
             }
 
             // Deliver next message
-            synchronized (dependency) {
+            synchronized (dependencies) {
                 delivered.get(originId).incrementAndGet();
                 deliver.apply(Message.createMessage(originId, nextIdToDeliver));
-                messages.remove(nextIdToDeliver); // garbage collecting
             }
+            messages.remove(nextIdToDeliver); // garbage collecting
+            nbMessagesDelivered += 1;
         }
+        return nbMessagesDelivered;
     }
 }
