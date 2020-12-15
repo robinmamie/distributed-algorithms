@@ -1,12 +1,9 @@
 package cs451.broadcast;
 
-import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntConsumer;
 
@@ -14,6 +11,11 @@ import cs451.listener.BListener;
 import cs451.message.Message;
 import cs451.parser.Host;
 
+/**
+ * Localized causal broadcast abstraction. Implements the validity, no
+ * duplication, no creation, uniform agreement, FIFO and (localized) causal
+ * properties.
+ */
 public class LCausalBroadcast implements Broadcast {
 
     /**
@@ -23,13 +25,12 @@ public class LCausalBroadcast implements Broadcast {
 
     /**
      * The local message tallying: used to reorder messages that have been
-     * URB-delivered.
+     * URB-delivered. It stores the dependencies mentioned in the message.
      */
-    private final Map<Integer, BlockingQueue<Message>> pending = new TreeMap<>();
+    private final Map<Integer, Map<Integer, List<Integer>>> pending = new TreeMap<>();
 
     /**
-     * The local message tallying: used to reorder messages that have been
-     * URB-delivered.
+     * The vector clocks of the current delivery of each process.
      */
     private final Map<Integer, AtomicInteger> delivered = new TreeMap<>();
 
@@ -51,8 +52,23 @@ public class LCausalBroadcast implements Broadcast {
      */
     private final int myId;
 
+    /**
+     * The map of inter-process dependencies.
+     */
     private final Map<Integer, List<Integer>> dependencies;
 
+    /**
+     * 
+     * Create a FIFO broadcast instance.
+     *
+     * @param port              The port number, used to build the underlying link.
+     * @param hosts             The list of hosts, used to broadcast messages.
+     * @param myId              The ID of the local host, to keep track of which
+     *                          local messages are broadcast.
+     * @param deliver           The listener used when a message is delivered.
+     * @param broadcastListener The listener used when a local message is broadcast.
+     * @param dependencies      The map of inter-process dependencies.
+     */
     public LCausalBroadcast(int port, List<Host> hosts, int myId, BListener deliver, IntConsumer broadcastListener,
             Map<Integer, List<Integer>> dependencies) {
         this.urBroadcast = new URBroadcast(port, hosts, myId, this::deliver);
@@ -62,7 +78,7 @@ public class LCausalBroadcast implements Broadcast {
         this.dependencies = dependencies;
 
         for (Host host : hosts) {
-            pending.put(host.getId(), new LinkedBlockingQueue<>());
+            pending.put(host.getId(), new TreeMap<>());
         }
         for (Host host : hosts) {
             delivered.put(host.getId(), new AtomicInteger(0));
@@ -73,13 +89,14 @@ public class LCausalBroadcast implements Broadcast {
     public void broadcast(Message message) {
         List<Integer> dependencyIds = new LinkedList<>();
         List<Integer> dependency = dependencies.get(myId);
-        // TODO synchronize on delivery!
-        synchronized (dependency) {
+
+        synchronized (dependencies) {
             for (Integer i : dependency) {
                 dependencyIds.add(delivered.get(i).get());
             }
             broadcastListener.accept(message.getMessageId());
         }
+
         message = message.addCausality(dependencyIds);
         urBroadcast.broadcast(message);
     }
@@ -95,36 +112,53 @@ public class LCausalBroadcast implements Broadcast {
      * @param message The message to deliver.
      */
     private void deliver(Message message) {
-        pending.get(message.getOriginId()).add(message);
-        for (Map.Entry<Integer, BlockingQueue<Message>> entry : pending.entrySet()) {
-            List<Message> messages = new LinkedList<>();
-            entry.getValue().drainTo(messages);
-            messages.sort(Comparator.comparing(Message::getMessageId));
-            checkDependency(entry.getKey(), messages);
+        pending.get(message.getOriginId()).put(message.getMessageId(), message.getDependencies());
+        int count = 1;
+        while (count > 0) {
+            count = 0;
+            for (Map.Entry<Integer, List<Integer>> entry : dependencies.entrySet()) {
+                count += checkPendingQueue(entry.getKey());
+            }
         }
     }
 
-    private void checkDependency(int originId, List<Message> messages) {
+    /**
+     * Checks the pending messages' queue of the given process.
+     *
+     * @param originId The given process to check.
+     * @return The number of messages delivered from the given process.
+     */
+    private int checkPendingQueue(int originId) {
+        Map<Integer, List<Integer>> messages = pending.get(originId);
+
         List<Integer> dependency = dependencies.get(originId);
-        int count = 0;
-        for (Message message : messages) {
-            if (message.getMessageId() - 1 != delivered.get(originId).get()) {
-                pending.get(originId).addAll(messages.subList(count, messages.size()));
-                return;
+        int nextIdToDeliver = delivered.get(originId).get();
+        int nbMessagesDelivered = 0;
+        while (!messages.isEmpty()) {
+            nextIdToDeliver += 1;
+
+            // Messages always depend on the process ("FIFO")
+            if (!messages.containsKey(nextIdToDeliver)) {
+                return nbMessagesDelivered;
             }
+
+            // Check the dependencies on *other* processes (LCausal)
             for (int i = 0; i < dependency.size(); ++i) {
                 int deliveredId = delivered.get(dependency.get(i)).get();
-                int requiredId = message.getDependencies().get(i);
+                int requiredId = messages.get(nextIdToDeliver).get(i);
                 if (deliveredId < requiredId) {
-                    pending.get(originId).addAll(messages.subList(count, messages.size()));
-                    return;
+                    return nbMessagesDelivered;
                 }
             }
-            synchronized (dependency) {
+
+            // Deliver next message
+            synchronized (dependencies) {
                 delivered.get(originId).incrementAndGet();
-                deliver.apply(message);
+                deliver.apply(Message.createMessage(originId, nextIdToDeliver));
             }
-            count += 1;
+            messages.remove(nextIdToDeliver); // garbage collecting
+            nbMessagesDelivered += 1;
         }
+        return nbMessagesDelivered;
     }
 }

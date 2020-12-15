@@ -79,6 +79,13 @@ public class Message {
         return new Message((byte) originId, messageId, (byte) lastHop, dependencies);
     }
 
+    /**
+     * Add the list of causality/dependencies to this message. Used by the
+     * LCausalBroadcast layer.
+     * 
+     * @param dependencies The list of dependencies of this message.
+     * @return The newly created message.
+     */
     public Message addCausality(List<Integer> dependencies) {
         return new Message(this, dependencies);
     }
@@ -112,6 +119,13 @@ public class Message {
         return (int) lastHop & 0xFF;
     }
 
+    /**
+     * Get the list of dependencies of this message. Each element corresponds to a
+     * specific, external process according to the order found in the configuration
+     * file.
+     * 
+     * @return The list of dependencies of this message.
+     */
     public List<Integer> getDependencies() {
         return dependencies;
     }

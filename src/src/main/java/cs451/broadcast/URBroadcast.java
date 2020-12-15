@@ -25,7 +25,9 @@ class URBroadcast implements Broadcast {
     private final BEBroadcast beBroadcast;
 
     /**
-     * The tally of already URB-delivered messages.
+     * The tally of already URB-delivered messages. No need to keep more
+     * information, the rest will be given to the upper layer directly from the last
+     * message used to URB deliver it.
      */
     private final Map<Integer, VectorClock> delivered = new HashMap<>();
 
@@ -63,6 +65,7 @@ class URBroadcast implements Broadcast {
             delivered.put(host.getId(), new VectorClock());
         }
 
+        // Spawn a new thread that continuously delivers messages.
         Executors.newFixedThreadPool(1).execute(beBroadcast::run);
     }
 

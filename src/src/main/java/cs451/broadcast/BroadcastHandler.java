@@ -10,7 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import cs451.link.AbstractLink;
+import cs451.link.HostInfo;
 import cs451.message.Message;
 import cs451.parser.Coordinator;
 import cs451.parser.Parser;
@@ -44,6 +47,11 @@ public class BroadcastHandler {
      * The coordinator of the program.
      */
     private static Coordinator coordinator;
+
+    /**
+     * The vector clock of the local message deliveries.
+     */
+    private static final AtomicInteger delivering = new AtomicInteger();
 
     private BroadcastHandler() {
         // Everything is statically done in this class.
@@ -101,6 +109,9 @@ public class BroadcastHandler {
                 writer.write(String.format("d %d %d", message.getOriginId(), message.getMessageId()));
                 writer.newLine();
             }
+            if (message.getOriginId() == myId) {
+                delivering.set(message.getMessageId());
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -151,8 +162,18 @@ public class BroadcastHandler {
      * Start LCausal-broadcasting messages.
      */
     private static void startLCausal() {
+        Map<Integer, HostInfo> hostInfo = AbstractLink.getHostInfo();
+        int memoryLimit = 100_000 / hostInfo.size();
         for (int i = 1; i <= nbMessagesToBroadcast; ++i) {
             broadcast.broadcast(Message.createMessage(myId, i));
+            while (i - delivering.get() > memoryLimit) {
+                try {
+                    Thread.sleep(100L);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
         }
     }
 
@@ -176,7 +197,8 @@ public class BroadcastHandler {
      * Read the number of messages to be broadcast from the LCausal config file, and
      * fill the dependency list.
      *
-     * @param path The path to the config file.
+     * @param path         The path to the config file.
+     * @param dependencies The (empty) map of dependencies.
      * @return The number of messages to be broadcast.
      */
     private static int readLCausalConfig(String path, Map<Integer, List<Integer>> dependencies) {
@@ -186,11 +208,11 @@ public class BroadcastHandler {
             nbMessages = Integer.parseInt(line);
             int currentId = 1;
             while (null != (line = reader.readLine())) {
-                List<Integer> list = new LinkedList<Integer>();
+                List<Integer> list = new LinkedList<>();
                 try (Scanner scanner = new Scanner(line)) {
                     while (scanner.hasNextInt()) {
                         int process = scanner.nextInt();
-                        if (process != myId) {
+                        if (process != currentId) {
                             list.add(process);
                         }
                     }

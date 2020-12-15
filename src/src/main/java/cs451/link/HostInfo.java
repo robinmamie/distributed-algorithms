@@ -35,7 +35,7 @@ public class HostInfo {
 
     /**
      * The messages already delivered from this host, i.e. messages that had this
-     * host as last hop.
+     * host as last hop. This is used by the PerfectLink layer.
      */
     private final Map<Integer, MessageRange> delivered = new TreeMap<>();
 

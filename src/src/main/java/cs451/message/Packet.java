@@ -14,8 +14,29 @@ public class Packet {
      * The maximum number of bytes authorized for the payload of a given UDP packet.
      */
     public static final int MAX_PAYLOAD_SIZE = 65507;
-    public static final int BASIC_MESSAGE_SIZE = 5;
-    public static final int SAFE_MAX_PAYLOAD_SIZE = MAX_PAYLOAD_SIZE - 127 * Integer.BYTES - BASIC_MESSAGE_SIZE;
+
+    /**
+     * The number of bytes used by a message inside the packet. 1 byte for the host
+     * ID (because it is between 1 and 128), 4 for the message ID (because it is
+     * between 1 and MAX_INT), and 1 for the size of the dependency list.
+     */
+    public static final int BASIC_MESSAGE_SIZE = 6;
+
+    /**
+     * The size of each dependency, used by the StubbornLink to estimate the size of
+     * a packet.
+     */
+    public static final int SIZE_OF_DEPENDENCY = Integer.BYTES;
+
+    private static final int MAX_NUM_OF_OTHER_PROCESSES = 127;
+
+    /**
+     * The maximum "safe" size for a packet, before one cannot be sure if the next
+     * waiting message retrieved by the stubborn layer will break the size limit of
+     * the packet.
+     */
+    public static final int SAFE_MAX_PAYLOAD_SIZE = MAX_PAYLOAD_SIZE
+            - (BASIC_MESSAGE_SIZE + MAX_NUM_OF_OTHER_PROCESSES * SIZE_OF_DEPENDENCY);
 
     // Byte offsets used for the byte datagram.
     private static final int NB_MESSAGES_OFFSET = 0;
@@ -24,13 +45,6 @@ public class Packet {
     private static final int LAST_HOP_OFFSET = 12;
     private static final int ACK_OFFSET = 13;
     public static final int CONTENTS_OFFSET = 14;
-
-    /**
-     * The number of bytes used by a message inside the packet. 1 byte for the host
-     * ID (because it is between 1 and 128), 4 for the message ID (because it is
-     * between 1 and MAX_INT).
-     */
-    public static final int SIZE_OF_MESSAGE = 5;
 
     /**
      * The last hop of the message, i.e. the ID of the host that sent it (this is
